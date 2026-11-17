@@ -1,7 +1,7 @@
 {
   "schema": "ioswb-release-manifest/1",
   "protocol_version": 1,
-  "generated_at": "2026-11-17T16:05:00+08:00",
+  "generated_at": "2026-11-17T16:53:28+08:00",
   "tasks": [
     {
       "task_id": "SMOKE-001",
@@ -22,6 +22,16 @@
       "content_sha256": "a891b81c341e610f7c5154ef15b024ba8d2cb816f0d6b474ed08b25f7874cf44",
       "scopes": ["offline-testing"],
       "title": "IOS-AUTO-SMOKE-001 只读短文本 r2"
+    },
+    {
+      "task_id": "SMOKE-002",
+      "revision": 1,
+      "status": "published",
+      "task_path": "tasks/IOS-AUTO-SMOKE-002.md",
+      "task_commit": "f50b88226ae2df0addc553e7210f6653624cd1e7",
+      "content_sha256": "994f23df0e4de0594742b496b062f6bce1ccd8dd2d7e3a427abef9338b1ead62",
+      "scopes": ["offline-testing"],
+      "title": "IOS-AUTO-SMOKE-002 只读短文本（无人值守试跑）"
     }
   ]
 }
