@@ -1,0 +1,46 @@
+# 防止图片、视频、原始日志和凭据被误提交。
+# 后缀未列出的转储、账号参数和密钥同样不得提交。
+
+# 图片
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.webp
+*.bmp
+*.heic
+*.heif
+*.tif
+*.tiff
+
+# 视频与录屏
+*.mp4
+*.mov
+*.m4v
+*.avi
+*.mkv
+*.webm
+
+# 原始日志与崩溃转储
+*.log
+*.jsonl
+*.ips
+*.crash
+events.jsonl
+console.log
+
+# 凭据与密钥
+.env
+.env.*
+*.pem
+*.key
+*.p12
+*.mobileprovision
+credentials.json
+secrets.json
+id_rsa
+id_rsa.pub
+
+# 本机画面目录
+screenshots/
+recordings/
