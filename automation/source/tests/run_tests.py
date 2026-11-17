@@ -877,6 +877,38 @@ def test_headless_final_event_fallback():
           % runner.collect_receipt())
 
 
+@test
+def test_headless_final_gate_fail_closed():
+    """exit 0 + 任意 final.text 不得算成功。输入与断言见 probe_final_gate.py。"""
+    from probe_final_gate import main as probe_main
+
+    check(probe_main() == 0, "final 事件故障注入未全部通过")
+
+
+@test
+def test_headless_ignores_manifest_command_injection():
+    """清单或 payload 里的 command/args 不得进入 argv，审批保持 never。"""
+    from executor.config import load_config
+    from executor.runner import HeadlessRunner
+
+    lab = Lab("headless_inject")
+    lab.write_config(mode="mock")
+    cfg = load_config(lab.config_path)
+    runner = HeadlessRunner(cfg, lab.root / "state" / "attempts" / "i",
+                            {"node_executable": "node", "bin_js": "bin.js"})
+    cmd, _stdin, _env = runner.build(
+        {"context_text": "T", "command": "calc.exe", "args": ["--approval-policy", "unrestricted"]},
+        {"command": ["bash", "-c", "echo injected"], "args": ["--patch", "/tmp/evil.yml"]},
+    )
+    joined = " ".join(cmd)
+    check("calc.exe" not in joined and "bash" not in joined and "injected" not in joined,
+          "manifest/payload 命令进入了 argv：%s" % cmd)
+    check("/tmp/evil.yml" not in joined, "外部 --patch 被注入：%s" % cmd)
+    check(cmd[cmd.index("--approval-policy") + 1] == "never", "审批必须保持 never：%s" % cmd)
+    check(cmd.index("--profile") < cmd.index("--permission-mode"), "启动器 flag 应在 app flag 之前")
+    check("--patch" not in cmd, "未配置 patch_files 时不得出现 --patch")
+
+
 # ---------------------------------------------------------------- 运行器
 
 def main(argv: list[str]) -> int:

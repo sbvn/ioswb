@@ -98,6 +98,8 @@ def compose_context(task_text: str, handoff: dict | None, budget_bytes: int) -> 
         "\n硬性约束：只做任务单范围内的事；不连接手机、不注册、不采集凭据、不安装工具；"
         "回执必须脱敏；不要执行 git push。\n"
         "把最终回执同时写入当前目录的 RECEIPT.md（Markdown，脱敏），然后结束。\n"
+        "只有进程退出码为 0 且唯一 final.reason.kind 严格等于 completed、并且回执非空，才算成功；"
+        "日志里有文字不能单独算成功。RECEIPT.md 与最终文本如果都有，去空白后必须相同。\n"
         "----- 任务单开始 -----\n"
     )
     fixed = len((header + handoff_block + footer + "\n----- 任务单结束 -----\n").encode("utf-8"))

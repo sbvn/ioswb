@@ -184,6 +184,11 @@ class Runner:
             return RunOutcome(status="failed", exit_code=exit_code, error=stderr_tail.strip()[:800],
                               duration_seconds=duration, stdout_path=str(stdout_path),
                               stderr_path=str(stderr_path))
+        gate = self.success_gate(exit_code, receipt_text)
+        if gate:
+            return RunOutcome(status="failed", exit_code=exit_code, error=gate,
+                              duration_seconds=duration, stdout_path=str(stdout_path),
+                              stderr_path=str(stderr_path))
         if receipt_text is None:
             return RunOutcome(status="failed", exit_code=exit_code,
                               error="执行成功退出但没有产出回执", duration_seconds=duration,
@@ -191,6 +196,10 @@ class Runner:
         return RunOutcome(status="success", exit_code=exit_code, receipt_text=receipt_text,
                           duration_seconds=duration, stdout_path=str(stdout_path),
                           stderr_path=str(stderr_path))
+
+    def success_gate(self, exit_code: int | None, receipt_text: str | None) -> str | None:
+        """子类可追加完成条件。默认不额外收紧（mock 仍以退出码和回执为准）。"""
+        return None
 
     def collect_receipt(self) -> str | None:
         receipt = self.attempt_dir / "RECEIPT.md"
@@ -238,6 +247,7 @@ class HeadlessRunner(Runner):
         # 因此启动器 flag（--profile、--patch）必须在 app flag（--permission-mode 等）之前，
         # 否则 app 会收到 "unknown option '--patch'"。
         cmd = [node, bin_js, "--profile", "headless"]
+        # payload / spec / 清单 meta 里的 command、args 一律不进入 argv。
         # --patch 只允许指向本项目 automation 内的无密钥覆盖文件（配置层已校验）。
         for rel in self.cfg.harness.patch_files:
             path = Path(rel)
@@ -257,31 +267,79 @@ class HeadlessRunner(Runner):
         return cmd, prompt, env
 
     def collect_receipt(self) -> str | None:
-        """优先 RECEIPT.md；没有则回退到 --json 流里的 final.text（文档保证无损）。"""
+        """取回执文本。完成与否由 success_gate 决定，文本本身不能把失败改成成功。
+
+        优先 RECEIPT.md。没有文件时，才用唯一一条 final.text。两份都有且去空白后不同，记为不一致。
+        """
+        self._stream_verdict = self._parse_stdout()
+        file_text = ""
         receipt = self.attempt_dir / "RECEIPT.md"
         if receipt.exists():
-            text = receipt.read_text(encoding="utf-8", errors="replace").strip()
-            if text:
-                return text
-        return self._final_answer_from_stream()
+            file_text = receipt.read_text(encoding="utf-8", errors="replace").strip()
+        final_text = self._stream_verdict.get("text") or ""
+        if file_text and final_text and file_text != final_text:
+            self._stream_verdict["mismatch"] = True
+        if file_text:
+            return file_text
+        return final_text or None
 
-    def _final_answer_from_stream(self) -> str | None:
+    def success_gate(self, exit_code: int | None, receipt_text: str | None) -> str | None:
+        """官方契约：exit 0 且 final.reason.kind 严格为 completed，并有非空输出。"""
+        if exit_code != 0:
+            return None
+        verdict = getattr(self, "_stream_verdict", None) or self._parse_stdout()
+        if verdict.get("error"):
+            return verdict["error"]
+        if verdict.get("mismatch"):
+            return "RECEIPT.md 与 final.text 不一致"
+        if not (receipt_text and receipt_text.strip()):
+            return "exit 0 且 completed，但没有有效任务输出"
+        return None
+
+    def _parse_stdout(self) -> dict:
+        """严格解析 --json 事件流。任何歧义都 fail closed，不跳过坏行。"""
+        empty = {"error": "无事件流", "text": "", "mismatch": False}
         log = self.attempt_dir / "harness.stdout.log"
         if not log.exists():
-            return None
-        answer = None
-        for line in log.read_text(encoding="utf-8", errors="replace").splitlines():
-            line = line.strip()
-            if not line.startswith("{"):
+            return empty
+        try:
+            raw = log.read_text(encoding="utf-8", errors="replace")
+        except OSError as exc:
+            return {"error": "事件流不可读: %s" % exc, "text": "", "mismatch": False}
+        finals = []
+        for lineno, line in enumerate(raw.splitlines(), 1):
+            if not line.strip():
                 continue
             try:
                 event = json.loads(line)
             except json.JSONDecodeError:
-                continue
-            if event.get("type") == "final" and isinstance(event.get("text"), str) \
-                    and event["text"].strip():
-                answer = event["text"].strip()
-        return answer
+                return {"error": "事件流格式坏（第 %d 行不是 JSON）" % lineno,
+                        "text": "", "mismatch": False}
+            if not isinstance(event, dict):
+                return {"error": "事件流格式坏（第 %d 行不是对象）" % lineno,
+                        "text": "", "mismatch": False}
+            if event.get("type") == "final":
+                finals.append(event)
+        if not finals:
+            return {"error": "无 final 事件", "text": "", "mismatch": False}
+        if len(finals) != 1:
+            return {"error": "多条 final 事件，结果歧义（%d 条）" % len(finals),
+                    "text": "", "mismatch": False}
+        event = finals[0]
+        reason = event.get("reason") if "reason" in event else None
+        if not isinstance(reason, dict):
+            return {"error": "final 缺少 reason", "text": "", "mismatch": False}
+        kind = reason.get("kind")
+        text = event.get("text")
+        if text is None:
+            text = ""
+        if not isinstance(text, str):
+            return {"error": "事件流格式坏（final.text 不是字符串）", "text": "", "mismatch": False}
+        if not isinstance(kind, str) or kind != "completed":
+            shown = kind if isinstance(kind, str) else "缺失"
+            return {"error": "final.reason.kind 为 %s，不是 completed" % shown,
+                    "text": text.strip(), "mismatch": False}
+        return {"error": None, "text": text.strip(), "mismatch": False}
 
 
 # ---------------------------------------------------------------- 产品核验
