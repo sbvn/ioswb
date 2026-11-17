@@ -17,7 +17,8 @@
 | SMOKE-001 | r2 | 已发布；仅现有会话读交接后可跑一次 | IOS-AUTO-SMOKE-001 只读短文本 r2 | [tasks/IOS-AUTO-SMOKE-001-r2.md](tasks/IOS-AUTO-SMOKE-001-r2.md) | 尚未回传 | 未跑 |
 | SMOKE-002 | v1 / r1 | 已试跑：未通过（凭据缺失，已消费，已回滚） |
 | SMOKE-002 | v1 / r2 | 已验收：通过，自动档已常驻 | IOS-AUTO-SMOKE-002 只读短文本（无人值守）r2 | [tasks/IOS-AUTO-SMOKE-002-r2.md](tasks/IOS-AUTO-SMOKE-002-r2.md) | [a1](results/SMOKE-002/r2/a1.md)（`5827515`，worker 自动上传 `f338913`） | [reviews/SMOKE-002-r2-5827515.md](reviews/SMOKE-002-r2-5827515.md) | IOS-AUTO-SMOKE-002 只读短文本（无人值守） | [tasks/IOS-AUTO-SMOKE-002.md](tasks/IOS-AUTO-SMOKE-002.md) | [a1](results/SMOKE-002/r1/a1.md)（`2945536`） | [reviews/SMOKE-002-r1-2945536.md](reviews/SMOKE-002-r1-2945536.md) |
-| IOS-006 | v1 / r1 | 已发布（清单 published，手机子档只读盘点） | 盘点 AMG 包名、现成工具、一键新机完成信号与设备参数衔接 | [tasks/IOS-006.md](tasks/IOS-006.md) | 尚未回传 | 未跑 |
+| IOS-007 | v1 / r1 | 已发布（清单 published） | AMG 点一键新机等完成 → 微博刷新1次、滑动3–5下、到登录页 | [tasks/IOS-007.md](tasks/IOS-007.md) | 尚未回传 | 未跑 |
+| IOS-006 | v1 / r1 | 已完成（验收通过：AMG=com.superdev.AMG，无现成工具，完成信号待实测） | 盘点 AMG 包名、现成工具、一键新机完成信号与设备参数衔接 | [tasks/IOS-006.md](tasks/IOS-006.md) | 尚未回传 | 未跑 |
 | IOS-005 | v1 / r3 | 已完成（验收通过：预杀冷启动、刷新1次、滑动4次、退出码0） | 运行现有程序一次：打开微博、首页刷新1次、随机滑动3–5下 | [tasks/IOS-005-r3.md](tasks/IOS-005-r3.md) | 尚未回传 | 未跑 |
 | IOS-005 | v1 / r2 | 已停止：预检发现微博仍在运行（pid 4475 未被关掉），按冷启动保险未执行 | 运行现有程序一次：打开微博、首页刷新1次、随机滑动3–5下 | [tasks/IOS-005-r2.md](tasks/IOS-005-r2.md) | 尚未回传 | 未跑 |
 | IOS-005 | v1 / r1 | 已执行未完成：attach 已运行的微博两次失败（dyld probing），未刷新未滑动；全链路跑通 | 运行现有程序一次：打开微博、首页刷新1次、随机滑动3–5下 | [tasks/IOS-005.md](tasks/IOS-005.md) | 尚未回传 | 未跑 |
