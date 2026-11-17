@@ -14,6 +14,7 @@
 | IOS-002 | v1 / r2 | 已验收：信任范围修复成立，不能 live | 收紧清单信任范围 | [tasks/IOS-002-r2.md](tasks/IOS-002-r2.md) | [results/IOS-002/r2/a1.md](results/IOS-002/r2/a1.md)（`9b553fda23a71007ca741a1d4483a59f197f5de0`） | [reviews/IOS-002-r2-9b553fd.md](reviews/IOS-002-r2-9b553fd.md) |
 | AUTO-CONNECT-001 | v1 / r1 | 已验收：等待器只读，不能 live | 一次连接父任务 | [tasks/AUTO-CONNECT-001.md](tasks/AUTO-CONNECT-001.md) | [a1](results/AUTO-CONNECT-001/r1/a1.md)、[a2](results/AUTO-CONNECT-001/r1/a2.md) | [reviews/AUTO-CONNECT-001-r1-9b553fd.md](reviews/AUTO-CONNECT-001-r1-9b553fd.md) |
 | SMOKE-001 | r1 | 已准备，默认不执行 | IOS-AUTO-SMOKE-001 只读短文本 | [tasks/IOS-AUTO-SMOKE-001.md](tasks/IOS-AUTO-SMOKE-001.md) | 未执行 | 未跑 |
+| AUTO-CONNECT-001 | v1 / r2 | 已发布 | 签名门禁与等待器 | [tasks/AUTO-CONNECT-001-r2.md](tasks/AUTO-CONNECT-001-r2.md) | 待本机实现后写 `results/AUTO-CONNECT-001/r2/a1.md` | 未验收 |
 
 IOS-002 r1：blob SHA-1 `0ff8291afd777d7b64ea13c2480e9ccfca65ec70`；`content_sha256` `c709f134d2846fc51cc3dc1c4ce18f8ddb6f8244490a679ed6549cee7fc28ea8`。两个值不相等，不能互相替代。
 
@@ -41,7 +42,8 @@ IOS-AUTO-SMOKE-001：blob SHA-1 `1be33135fd636216739f191e3c7cdac39f87c804`；`co
 - r2 已验收。信任范围修复成立。不要重跑 r2，不要覆盖 `a1`。
 - [AUTO-CONNECT-001](tasks/AUTO-CONNECT-001.md) 的等待器验收为只读。它不会因为看到 review 就执行新任务。
 - [IOS-AUTO-SMOKE-001](tasks/IOS-AUTO-SMOKE-001.md) 已准备。默认 dry-run、信任未配时不执行。本索引不是用户的外带确认。
-- live 仍不启用。仓库提交未签名，不能做持续签名锚。手机操作仍未授权。
+- live 仍不启用。签名证据见 [reviews/SIGNATURE-77998e8.md](reviews/SIGNATURE-77998e8.md)。本索引不是用户的外带确认。手机操作仍未授权。
+- 桥接修正单 [AUTO-CONNECT-001 r2](tasks/AUTO-CONNECT-001-r2.md) 已发布。当前等待器还不能按签名执行任务。
 
 ## IOS-002 v1/r1 授权边界
 

@@ -85,9 +85,9 @@ live 默认关闭。身份或信任锚尚不明确时，live 保持 blocked。�
 
 r2 之后：只钉住某一个 `task_commit`，只放行 `task_commit` 等于该钉的任务。签名只核清单文件所在提交。清单摘要钉绑定成功时，放行的是这一份清单里的 `published` 任务，不是以后的新清单。
 
-本仓库提交的 `%G?` 仍是 `N`。没有可核验的发布方公钥，因此不能配置持续签名锚。只钉当前清单，下一份清单不会自动受信任。这还不是无人值守。生产信任锚要由操作者自己写入，不由任务回执或本协议自动写入。
+本机 `git log %G?` 曾显示 `N`，同时打印 `gpg.ssh.allowedSignersFile` 未配置。这不能写成「公开提交没有签名」。`77998e8`、`2164650`、`8e9bcfb`、`f3eebdb` 的提交对象里有 `gpgsig` SSH 签名，与 GitHub API 的 `verification.signature` 一致；API 的 `verified=true`、`reason=valid`。用签名内的公钥做 `ssh-keygen -Y verify` 结果为 Good。指纹和限制见 [reviews/SIGNATURE-77998e8.md](../reviews/SIGNATURE-77998e8.md)。绿勾和作者名本身不是信任锚。
 
-本分支已有提交的 `%G?` 为 `N`。在签名审验完成前，不把这些提交当作已签名发布。
+持续发布要等用户一次外带确认这把公钥。确认前不写 `config/trust/`，不启用 live。只钉一份清单摘要不能代替这把密钥；确认之后，同一公钥签的后续清单提交才可以继续，不必每份清单重新人工钉摘要。当前 worker 还不会做这件校验。
 
 ## 清单字段
 
