@@ -23,7 +23,13 @@ AUTO-CONNECT-001 r1：blob SHA-1 `445a6ef779d2758a0d356f92b3fddd85ad17271a`；`c
 
 一次连接说明 [automation/CONNECT_ONCE.md](automation/CONNECT_ONCE.md)：blob SHA-1 `283edb054417adcbc6d08de56ca95429c5a65cd5`；`content_sha256` `e62834c5951193dc5a5b1d6cd8765a5598631051c292704327859100cfe1925e`。
 
-IOS-AUTO-SMOKE-001：blob SHA-1 `1be33135fd636216739f191e3c7cdac39f87c804`；`content_sha256` `aba337481a3912205b3fe826bd05c615b694db1db5ca50f06c6937b3004813f8`。清单 task_id 是 `SMOKE-001`。清单提交和摘要钉在下一提交写入，本行不代替用户确认。
+IOS-AUTO-SMOKE-001：blob SHA-1 `1be33135fd636216739f191e3c7cdac39f87c804`；`content_sha256` `aba337481a3912205b3fe826bd05c615b694db1db5ca50f06c6937b3004813f8`。清单 task_id 是 `SMOKE-001`。任务提交 `8e9bcfb98526ba17ab6b6e7eca6d88c9072e930e`。
+
+清单文件提交 `216465021b5468e954a61eb8f4b75de5c01c3fe1`。外带锚只有这一条，而且本行不是用户已经确认：
+
+`4d9d35446ed3e272f3ca70894a8344989ff1139843dcc2c56b5ffcc08f7f9013:216465021b5468e954a61eb8f4b75de5c01c3fe1`
+
+写入本机信任时保持 `mode=dry-run`、`live.enabled=false`。不要打开 live，不要读取 token。下一份清单不会自动沿用这个锚。
 
 协议：[docs/AUTOMATION_PROTOCOL.md](docs/AUTOMATION_PROTOCOL.md)。唯一读取 ref 是 `cursor/init-collab-docs-2e45`。
 
