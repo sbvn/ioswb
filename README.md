@@ -24,7 +24,7 @@
 1. 团队讨论。02/03/04 按下方「反馈必需字段」补充意见。
 2. 01 汇总为一份任务单：先用 `templates/TASK.md`，再写入 `tasks/IOS-XXX.md`，填写版本号并标记「已发布」。
 3. 用户把该任务单交给自己的 DeepSeek Harness 执行。
-4. Harness 按 `templates/RESULT.md` 写结果。IOS-001 的回执保持 `results/IOS-001.md`。自 IOS-002 起，常规回执写 `results/<任务>/<revision>/a<n>.md`，并绑定该任务的提交身份。`automation/BOOTSTRAP.md` 是已受理的兼容例外，不要求重做或搬迁。只提交脱敏摘要。
+4. Harness 按 `templates/RESULT.md` 写结果。IOS-001 的回执保持 `results/IOS-001.md`。自 IOS-002 起，常规回执写 `results/<任务>/r<revision>/a<n>.md`。`automation/BOOTSTRAP.md` 是已受理的兼容例外，不要求重做或搬迁。只提交脱敏摘要。
 5. 02/03/04 初审。01 按 `templates/REVIEW.md` 把验收结论写入 `reviews/`。
 6. 未通过时，由 01 另发下一份任务单。不在结果文件或验收意见里口头追加授权。
 
@@ -32,8 +32,9 @@
 
 - [IOS-001 v1.0](tasks/IOS-001.md) 已验收，结论见 [reviews/IOS-001.md](reviews/IOS-001.md)。
 - [automation/BOOTSTRAP.md](automation/BOOTSTRAP.md) 已受理，限定验收见 [reviews/BOOTSTRAP.md](reviews/BOOTSTRAP.md)。不要重做这份 bootstrap。
-- [IOS-002 v1/r1](tasks/IOS-002.md) 已发布。worker 还没有清单，不能自动领取；由用户现有 Harness 会话读这一份任务一次。
-- `manifest/releases.json` 尚未发布。真实字段要等 IOS-002 从本机 parser 和 README 提取，01 不猜测字段。live 未授权。
+- [IOS-002 r1](tasks/IOS-002.md) 已有回执。验收见 [reviews/IOS-002-r1-6c9888a.md](reviews/IOS-002-r1-6c9888a.md)。离线套件已复现，但不能 live。
+- [IOS-002 r2](tasks/IOS-002-r2.md) 已发布，只修信任范围。不要重做 bootstrap，不要覆盖 `results/IOS-002/r1/a1.md`。
+- `manifest/releases.json` 仍未发布。schema 不能单独表达「待外带确认」，当前实现也不能把单个 task commit 的信任钉限制在对应任务上。
 
 ## 执行许可
 
@@ -126,7 +127,7 @@ templates/RESULT.md
 templates/REVIEW.md
 tasks/IOS-XXX.md
 results/IOS-XXX.md
-results/<任务>/<revision>/a<n>.md
+results/<任务>/r<revision>/a<n>.md
 reviews/IOS-XXX.md
 reviews/BOOTSTRAP.md
 automation/BOOTSTRAP.md

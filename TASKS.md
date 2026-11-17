@@ -10,9 +10,12 @@
 | --- | --- | --- | --- | --- | --- | --- |
 | IOS-001 | v1.0 | 已验收：只读盘点部分通过 | 现状核查、环境/工具清单与稳定性证据整理 | [tasks/IOS-001.md](tasks/IOS-001.md) | [results/IOS-001.md](results/IOS-001.md)（`ce0024b0cb4d42ac5b3da5e50fae9897d1c3c2ec`） | [reviews/IOS-001.md](reviews/IOS-001.md) |
 | BOOTSTRAP | 回执 v1.0 | 限定验收：mock 成果可进入下一阶段 | 离线框架回执（兼容例外，不要求重做） | [automation/BOOTSTRAP.md](automation/BOOTSTRAP.md)（`d6a0c8cc88ec52caf02543e41095ed30e3180f86`） | 该文件即回执 | [reviews/BOOTSTRAP.md](reviews/BOOTSTRAP.md) |
-| IOS-002 | v1 / r1 | 已发布 | 自动交接框架的最小协议对齐 | [tasks/IOS-002.md](tasks/IOS-002.md) | 待现有会话执行后写入 `results/IOS-002/r1/a1.md` | 未验收 |
+| IOS-002 | v1 / r1 | 已复跑：不能 live | 自动交接框架的最小协议对齐 | [tasks/IOS-002.md](tasks/IOS-002.md) | [results/IOS-002/r1/a1.md](results/IOS-002/r1/a1.md)（`6c9888abae9b970d2b4af8a3e0d95fd4e53421e1`，原文不改） | [reviews/IOS-002-r1-6c9888a.md](reviews/IOS-002-r1-6c9888a.md) |
+| IOS-002 | v1 / r2 | 已发布 | 收紧清单信任范围 | [tasks/IOS-002-r2.md](tasks/IOS-002-r2.md) | 待现有会话写入 `results/IOS-002/r2/a1.md` | 未验收 |
 
-IOS-002 r1 的 git blob SHA：`0ff8291afd777d7b64ea13c2480e9ccfca65ec70`。同 revision 内容若不再等于该 blob，worker 必须阻断。
+IOS-002 r1：blob SHA-1 `0ff8291afd777d7b64ea13c2480e9ccfca65ec70`；`content_sha256` `c709f134d2846fc51cc3dc1c4ce18f8ddb6f8244490a679ed6549cee7fc28ea8`。两个值不相等，不能互相替代。
+
+IOS-002 r2：blob SHA-1 `9445ac7bb73ec4cb0209b0d55aee36793848bf1e`；`content_sha256` `e01f01a3bb4ac7751702bd46f10033676b769b981341d8f886c22d1ec57f6b47`。同 revision 内容若不再等于对应摘要，必须阻断。
 
 协议：[docs/AUTOMATION_PROTOCOL.md](docs/AUTOMATION_PROTOCOL.md)。唯一读取 ref 是 `cursor/init-collab-docs-2e45`。
 
@@ -20,15 +23,22 @@ IOS-002 r1 的 git blob SHA：`0ff8291afd777d7b64ea13c2480e9ccfca65ec70`。同 r
 
 - IOS-001 保持已验收，不重开。
 - bootstrap 回执已受理。不要重做。
-- IOS-002 已发布。本机 worker 没有 `manifest/releases.json`，不能自动领取。首次由用户现有 Harness 会话读 `tasks/IOS-002.md` 一次。这不是自动领取成功。
-- `manifest/releases.json` 尚未发布。原因：真实字段须等 IOS-002 从本机 parser 和 `automation/README.md` 只读提取。01 不猜测字段。
-- live 未授权。信任锚未做外带确认。手机操作仍未授权。
+- IOS-002 r1 回执已在。离线套件复跑见验收。不能 live。不要重做 bootstrap，不要覆盖 `a1`。
+- IOS-002 r2 已发布。现有会话读 `tasks/IOS-002-r2.md` 一次。这不是自动领取成功。
+- `manifest/releases.json` 仍未发布。schema 已提取，但没有「待外带确认」状态，而且单个 task commit 的信任钉会放行整份清单。
+- live 与生产信任锚仍 blocked。手机操作仍未授权。
 
 ## IOS-002 v1/r1 授权边界
 
 允许：只改 `D:\GoDemo\wbjiaoben\automation\` 内的框架和离线测试；只读提取 manifest schema；普通 push `results/IOS-002/r1/a1.md`。scopes 只有 `framework-development` 和 `offline-testing`。单 worker，最多 60 分钟。
 
 不授权：改微博脚本、业务 README、`AGENTS.md` 和 `runs*`；连接 Frida 或手机；安装工具或改服务；降低审批；headless 模型调用；启用 live；配置生产信任锚；发布真实 `manifest/releases.json`。
+
+## IOS-002 v1/r2 授权边界
+
+允许：只改 `automation\` 内的信任判断和离线测试；普通 push `results/IOS-002/r2/a1.md`。需要可读中文时另写 `results/IOS-002/r1/a2.md`，标明是转写。scopes 只有 `framework-development` 和 `offline-testing`。单 worker，最多 60 分钟。
+
+不授权：覆盖 r1 回执或改 r1 任务文件；live；生产信任锚；可领取清单；手机、Frida、模型调用。
 
 ## IOS-001 v1.0 授权边界
 

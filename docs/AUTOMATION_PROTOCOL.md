@@ -25,15 +25,18 @@ worker 和 01 只读 `cursor/init-collab-docs-2e45`。不从 `main` 领取任务
 - 暂停旗标：`manifest/PAUSE`
 - 不使用 `control/` 作为清单或暂停路径。本机控制入口如果仍叫 `executor/control.py`，那只是程序文件名，不是仓库控制面。
 
-常规回执递归落在 `results/<task_id>/<revision>/a<n>.md`，并且绑定该任务的身份。`automation/BOOTSTRAP.md` 是已经受理的兼容例外，不要求重做，也不要求改放到 `results/`。`results/IOS-001.md` 保持原路径，不追溯改写。
+常规回执路径是 `results/<task_id>/r<revision>/a<n>.md`（`revision` 前有 `r`，与本机 `result_rel_path` 和 `results/IOS-002/r1/a1.md` 一致）。`automation/BOOTSTRAP.md` 是已经受理的兼容例外，不要求重做，也不要求改放到 `results/`。`results/IOS-001.md` 保持原路径，不追溯改写。
 
 ## 身份
 
-任务身份是 `task_id` + `revision` + 内容 hash。内容 hash 用该任务文件的 git blob SHA，或清单里与该 blob 绑定的 content hash。两者冲突时阻断。
+任务身份分开记录，两个值不能互相替代：
 
-`revision` 不变而内容 hash 变化：阻断。不执行，不把旧动作接着跑。
+- `content_sha256`：`sha256(git show <task_commit>:<task_path> 的原始字节)`。这是清单字段。它不是 git blob SHA-1。
+- git blob SHA-1：另记在 [TASKS.md](../TASKS.md)，只做身份核对。不得把它写入 `content_sha256`。当前 parser 不把 blob SHA-1 当作清单字段；本协议不新增必填字段。
 
-IOS-002 r1 的 blob SHA 以 [TASKS.md](../TASKS.md) 的记载为准。本协议不把作者名或文件标题当成身份。
+`revision` 不变而 `content_sha256` 变化：阻断。不执行，不把旧动作接着跑。blob SHA-1 变了同样说明文件已变，但不能拿它去通过 parser。
+
+IOS-002 r1 的 blob SHA-1 与 `content_sha256` 都以 [TASKS.md](../TASKS.md) 的记载为准。本协议不把作者名或文件标题当成身份。
 
 ## 锁
 
@@ -78,13 +81,17 @@ live 默认关闭。身份或信任锚尚不明确时，live 保持 blocked。�
 
 不能只靠提交作者名、Markdown 自称 01，或任意 Pull Request。
 
-可用的方式只有：本机经外带渠道写入的 pin，或已经审验的签名。摘要钉、提交钉、签名指纹如果同时存在，摘要钉必须绑定到具体 commit，不能单独因为正文相似就放行。生产信任锚要由操作者外带确认，不由任务回执或本协议自动写入。
+可用的方式只有：本机经外带渠道写入的 pin，或已经审验的签名。摘要钉必须绑定清单文件所在的 commit（`<sha256>:<commit>`，或裸摘要并且同一 commit 也在 `pinned_commit` 里）。不能单独因为正文相似就放行。
+
+只钉住某一个 `task_commit`，不得据此放行同一份清单里的其他任务。签名也必须覆盖清单文件所在提交，不能只核 `published` 列表的第一项。当前快照还没有做到这一点，所以不能 live，也不能发布可领取清单。生产信任锚要由操作者外带确认，不由任务回执或本协议自动写入。
 
 本分支已有提交的 `%G?` 为 `N`。在签名审验完成前，不把这些提交当作已签名发布。
 
 ## 清单字段
 
-`manifest/releases.json` 尚未发布。原因：真实字段必须等 IOS-002 从本机 parser 和 `automation/README.md` 只读提取并核对。01 不在本文件猜测字段。
+`manifest/releases.json` 仍未发布。parser 实际接受的字段已经在 `automation/contract/manifest.schema.json`，本协议不另编字段。
+
+schema 的 `status` 只有 `published`、`withdrawn`、`draft`。只有 `published` 会被领取。没有「待外带确认、不得执行」这一档。因此空的 `tasks` 数组虽然能被 parser 接受，本轮也不发布它：worker 会从「没有清单」变成「清单已在但没有任务」，这不表示阻塞已经解除。
 
 待对齐的只是清单字段。上面各节的 ref、轮询、路径、身份、锁、台账、结果、STOP、执行方式和信任规则已经固定。字段对齐不得改掉这些不变量。
 
@@ -93,9 +100,9 @@ live 默认关闭。身份或信任锚尚不明确时，live 保持 blocked。�
 ## 当前阻塞
 
 - 没有已发布的 `manifest/releases.json`，worker 不能自动领取。
-- 信任锚未由外带渠道确认，live 不打开。
-- IOS-002 已作为正式任务发布，首次由用户现有 Harness 会话阅读 `tasks/IOS-002.md` 一次。这次阅读不是自动领取成功。
-- 之后 01 只用提取到的精确 schema 发布清单。用户再做一次外带信任锚确认后，才可能另发有范围的 live smoke。该 smoke 不在 IOS-002 的授权内。
+- 信任锚未由外带渠道确认。live 保持 blocked，本轮不跑 live smoke。
+- IOS-002 r1 的离线套件已由团队复跑。关键缺陷见 [reviews/IOS-002-r1-6c9888a.md](../reviews/IOS-002-r1-6c9888a.md)。修正任务是 IOS-002 r2，不是把 r1 再执行一遍。
+- 一次外带信任锚确认仍然必须，而且要等 r2 把「单个 task commit 不得放行整份清单」补上之后。该确认和 live smoke 都不在 r2 的授权内。
 
 ## 范围与审批
 
