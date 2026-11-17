@@ -17,6 +17,7 @@
 | SMOKE-001 | r2 | 已发布；仅现有会话读交接后可跑一次 | IOS-AUTO-SMOKE-001 只读短文本 r2 | [tasks/IOS-AUTO-SMOKE-001-r2.md](tasks/IOS-AUTO-SMOKE-001-r2.md) | 尚未回传 | 未跑 |
 | SMOKE-002 | v1 / r1 | 已试跑：未通过（凭据缺失，已消费，已回滚） |
 | SMOKE-002 | v1 / r2 | 已验收：通过，自动档已常驻 | IOS-AUTO-SMOKE-002 只读短文本（无人值守）r2 | [tasks/IOS-AUTO-SMOKE-002-r2.md](tasks/IOS-AUTO-SMOKE-002-r2.md) | [a1](results/SMOKE-002/r2/a1.md)（`5827515`，worker 自动上传 `f338913`） | [reviews/SMOKE-002-r2-5827515.md](reviews/SMOKE-002-r2-5827515.md) | IOS-AUTO-SMOKE-002 只读短文本（无人值守） | [tasks/IOS-AUTO-SMOKE-002.md](tasks/IOS-AUTO-SMOKE-002.md) | [a1](results/SMOKE-002/r1/a1.md)（`2945536`） | [reviews/SMOKE-002-r1-2945536.md](reviews/SMOKE-002-r1-2945536.md) |
+| IOS-004 | v1 / r1 | 已发布；自动档（等待器自动领取） | 执行器手机自动档门禁（phone_auto） | [tasks/IOS-004.md](tasks/IOS-004.md) | 尚未回传 | 未跑 |
 | IOS-003 | v1 / r1 | 已发布；人工档一次交接（不进清单） | 运行现有程序一次：打开微博、首页刷新1次、随机滑动3–6下 | [tasks/IOS-003.md](tasks/IOS-003.md) | 尚未回传 | 未跑 |
 | AUTO-CONNECT-001 | v1 / r2 | 已验收：补测通过；等待器在 dry-run 下不代跑 | 签名门禁与等待器 | [tasks/AUTO-CONNECT-001-r2.md](tasks/AUTO-CONNECT-001-r2.md) | [results/AUTO-CONNECT-001/r2/a1.md](results/AUTO-CONNECT-001/r2/a1.md)（`8d8ba568293bddfd5c73cd36c7c4b65e89554901`） | [reviews/AUTO-CONNECT-001-r2-8d8ba56.md](reviews/AUTO-CONNECT-001-r2-8d8ba56.md) |
 | AUTHORIZATION-001 | v1 | 成功判定已收紧；r2 交接已发布 |
