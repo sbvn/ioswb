@@ -24,11 +24,16 @@
 1. 团队讨论。02/03/04 按下方「反馈必需字段」补充意见。
 2. 01 汇总为一份任务单：先用 `templates/TASK.md`，再写入 `tasks/IOS-XXX.md`，填写版本号并标记「已发布」。
 3. 用户把该任务单交给自己的 DeepSeek Harness 执行。
-4. Harness 按 `templates/RESULT.md` 写结果，提交到本仓库的 `results/IOS-XXX.md`。只提交脱敏摘要。
-5. 02/03/04 初审。01 按 `templates/REVIEW.md` 把验收结论写入 `reviews/IOS-XXX.md`。
+4. Harness 按 `templates/RESULT.md` 写结果。IOS-001 的回执保持 `results/IOS-001.md`。自 IOS-002 起，常规回执写 `results/<任务>/<revision>/a<n>.md`，并绑定该任务的提交身份。`automation/BOOTSTRAP.md` 是已受理的兼容例外，不要求重做或搬迁。只提交脱敏摘要。
+5. 02/03/04 初审。01 按 `templates/REVIEW.md` 把验收结论写入 `reviews/`。
 6. 未通过时，由 01 另发下一份任务单。不在结果文件或验收意见里口头追加授权。
 
-当前已发布任务只有 [IOS-001 v1.0](tasks/IOS-001.md)。索引与授权边界以 [TASKS.md](TASKS.md) 为准。
+当前阶段以 [TASKS.md](TASKS.md) 为准。自动交接的不变量在 [docs/AUTOMATION_PROTOCOL.md](docs/AUTOMATION_PROTOCOL.md)。
+
+- [IOS-001 v1.0](tasks/IOS-001.md) 已验收，结论见 [reviews/IOS-001.md](reviews/IOS-001.md)。
+- [automation/BOOTSTRAP.md](automation/BOOTSTRAP.md) 已受理，限定验收见 [reviews/BOOTSTRAP.md](reviews/BOOTSTRAP.md)。不要重做这份 bootstrap。
+- [IOS-002 v1/r1](tasks/IOS-002.md) 已发布。worker 还没有清单，不能自动领取；由用户现有 Harness 会话读这一份任务一次。
+- `manifest/releases.json` 尚未发布。真实字段要等 IOS-002 从本机 parser 和 README 提取，01 不猜测字段。live 未授权。
 
 ## 执行许可
 
@@ -115,12 +120,16 @@ Harness 写回执时自行注明：产品是否为官方 `dsh`、版本、profil
 ```text
 README.md
 TASKS.md
+docs/AUTOMATION_PROTOCOL.md
 templates/TASK.md
 templates/RESULT.md
 templates/REVIEW.md
 tasks/IOS-XXX.md
 results/IOS-XXX.md
+results/<任务>/<revision>/a<n>.md
 reviews/IOS-XXX.md
+reviews/BOOTSTRAP.md
+automation/BOOTSTRAP.md
 ```
 
-结果文件必须包含：任务 ID 与版本、执行所依据的 commit、文件变更、实际命令、真实证据摘要、未验证项，并区分自述与独立证据。画面证据只写本机相对路径和摘要。
+`manifest/releases.json` 和 `manifest/PAUSE` 由协议规定。清单在 schema 提取完成前不发布。结果文件必须包含：任务 ID 与版本、执行所依据的 commit、文件变更、实际命令、真实证据摘要、未验证项，并区分自述与独立证据。画面证据只写本机相对路径和摘要。
