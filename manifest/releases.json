@@ -1,7 +1,7 @@
 {
   "schema": "ioswb-release-manifest/1",
   "protocol_version": 1,
-  "generated_at": "2026-11-17T17:12:36+08:00",
+  "generated_at": "2026-11-17T17:22:30+08:00",
   "tasks": [
     {
       "task_id": "SMOKE-001",
@@ -48,7 +48,7 @@
       "revision": 1,
       "status": "published",
       "task_path": "tasks/IOS-004.md",
-      "task_commit": "9ee4602d601b6039506d8ab89b6eb2e4cdb9854e",
+      "task_commit": "a643ff9ecb4c43077ed32e859db4114581967891",
       "content_sha256": "f4feb8bf71f925a770d5e9f9c935be88ca63a2637028bdd6e675a56df5531a5e",
       "scopes": ["framework-development", "offline-testing"],
       "title": "执行器手机自动档门禁（phone_auto）"
