@@ -1,7 +1,7 @@
 {
   "schema": "ioswb-release-manifest/1",
   "protocol_version": 1,
-  "generated_at": "2026-11-17T19:34:00+08:00",
+  "generated_at": "2026-11-17T19:41:00+08:00",
   "tasks": [
     {
       "task_id": "SMOKE-001",
@@ -164,7 +164,7 @@
     {
       "task_id": "IOS-007",
       "revision": 1,
-      "status": "published",
+      "status": "withdrawn",
       "task_path": "tasks/IOS-007.md",
       "task_commit": "1a6b6d67008d9e975db70aa164c1b6bcf0b44349",
       "content_sha256": "106bb081930d9a03268348bb16dc62dddc4b9fc3e83484bf6116b75642c1e387",
