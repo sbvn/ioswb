@@ -65,6 +65,29 @@ def append_ledger(record: dict) -> None:
         handle.flush()
 
 
+def write_handoff(payload: dict) -> None:
+    """把阶段写进持久 handoff，供下一次启动（可能是新进程）判断从哪里继续。"""
+    HANDOFF.parent.mkdir(parents=True, exist_ok=True)
+    record = {
+        "schema": "ioswb-handoff/1",
+        "task_id": "AUTO-CONNECT-001",
+        "revision": 1,
+        "attempt": 1,
+        "phase": payload.get("phase", "1"),
+        "blocker": payload.get("blocker"),
+        "digest": payload.get("last_commit"),
+        "summary": "phase=%s blocker=%s commit=%s" % (
+            payload.get("phase"), payload.get("blocker"), (payload.get("last_commit") or "")[:12]),
+        "updated_at": now(),
+        "artifacts": {"receipt_dir": "results/AUTO-CONNECT-001/r1/",
+                      "status": "automation/state/connect/status.json"},
+        "history": (read_status().get("history") or [])[-8:],
+    }
+    tmp = HANDOFF.with_suffix(".tmp")
+    tmp.write_text(json.dumps(record, ensure_ascii=False, indent=2), encoding="utf-8")
+    tmp.replace(HANDOFF)
+
+
 def git(args: list[str], timeout: float = 60.0) -> subprocess.CompletedProcess:
     import os
 
@@ -183,6 +206,7 @@ def main(argv: list[str] | None = None) -> int:
                     "running": True,
                 })
                 write_status(status)
+                write_handoff(status)
                 append_ledger({"ts": now(), "event": "scan_ok", "commit": snap["commit"][:12],
                                "phase": phase, "blocker": blocker,
                                "r2_receipt": snap["r2_receipt_present"],
