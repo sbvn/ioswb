@@ -15,9 +15,10 @@
 | AUTO-CONNECT-001 | v1 / r1 | 已验收：等待器只读，不能 live | 一次连接父任务 | [tasks/AUTO-CONNECT-001.md](tasks/AUTO-CONNECT-001.md) | [a1](results/AUTO-CONNECT-001/r1/a1.md)、[a2](results/AUTO-CONNECT-001/r1/a2.md) | [reviews/AUTO-CONNECT-001-r1-9b553fd.md](reviews/AUTO-CONNECT-001-r1-9b553fd.md) |
 | SMOKE-001 | r1 | 已撤回；失败台账保留，不可再领取 | IOS-AUTO-SMOKE-001 只读短文本 | [tasks/IOS-AUTO-SMOKE-001.md](tasks/IOS-AUTO-SMOKE-001.md) | [a4](results/AUTHORIZATION-001/r1/a4.md) 自述已消费、未进模型 | [a4 评审](reviews/AUTHORIZATION-001-a4-b7a042f.md) |
 | SMOKE-001 | r2 | 已发布；仅现有会话读交接后可跑一次 | IOS-AUTO-SMOKE-001 只读短文本 r2 | [tasks/IOS-AUTO-SMOKE-001-r2.md](tasks/IOS-AUTO-SMOKE-001-r2.md) | 尚未回传 | 未跑 |
-| SMOKE-002 | v1 / r1 | 已发布；自动档无人值守试跑 | IOS-AUTO-SMOKE-002 只读短文本（无人值守） | [tasks/IOS-AUTO-SMOKE-002.md](tasks/IOS-AUTO-SMOKE-002.md) | 尚未回传 | 未跑 |
+| SMOKE-002 | v1 / r1 | 已试跑：未通过（凭据缺失，已消费，已回滚） | IOS-AUTO-SMOKE-002 只读短文本（无人值守） | [tasks/IOS-AUTO-SMOKE-002.md](tasks/IOS-AUTO-SMOKE-002.md) | [a1](results/SMOKE-002/r1/a1.md)（`2945536`） | [reviews/SMOKE-002-r1-2945536.md](reviews/SMOKE-002-r1-2945536.md) |
 | AUTO-CONNECT-001 | v1 / r2 | 已验收：补测通过；等待器在 dry-run 下不代跑 | 签名门禁与等待器 | [tasks/AUTO-CONNECT-001-r2.md](tasks/AUTO-CONNECT-001-r2.md) | [results/AUTO-CONNECT-001/r2/a1.md](results/AUTO-CONNECT-001/r2/a1.md)（`8d8ba568293bddfd5c73cd36c7c4b65e89554901`） | [reviews/AUTO-CONNECT-001-r2-8d8ba56.md](reviews/AUTO-CONNECT-001-r2-8d8ba56.md) |
-| AUTHORIZATION-001 | v1 | 成功判定已收紧；r2 交接已发布 | 用户许可的受限发布公钥 | [automation/AUTHORIZATION-001.md](automation/AUTHORIZATION-001.md) | [a4](results/AUTHORIZATION-001/r1/a4.md)（`b7a042f`，未覆盖） | [a4 评审](reviews/AUTHORIZATION-001-a4-b7a042f.md) |
+| AUTHORIZATION-001 | v1 | 成功判定已收紧；r2 交接已发布 |
+| AUTHORIZATION-002 | v1 / r1 | 已验收：local-ack 生效 | Muse 发布钥匙受限信任锚 | [automation/AUTHORIZATION-002.md](automation/AUTHORIZATION-002.md) | [a1](results/AUTHORIZATION-002/r1/a1.md)（`4672e48`） | [reviews/AUTHORIZATION-002-r1-4672e48.md](reviews/AUTHORIZATION-002-r1-4672e48.md) | 用户许可的受限发布公钥 | [automation/AUTHORIZATION-001.md](automation/AUTHORIZATION-001.md) | [a4](results/AUTHORIZATION-001/r1/a4.md)（`b7a042f`，未覆盖） | [a4 评审](reviews/AUTHORIZATION-001-a4-b7a042f.md) |
 
 IOS-002 r1：blob SHA-1 `0ff8291afd777d7b64ea13c2480e9ccfca65ec70`；`content_sha256` `c709f134d2846fc51cc3dc1c4ce18f8ddb6f8244490a679ed6549cee7fc28ea8`。两个值不相等，不能互相替代。
 
