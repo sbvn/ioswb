@@ -83,26 +83,26 @@ live 默认关闭。身份或信任锚尚不明确时，live 保持 blocked。�
 
 可用的方式只有：本机经外带渠道写入的 pin，或已经审验的签名。摘要钉必须绑定清单文件所在的 commit（`<sha256>:<commit>`，或裸摘要并且同一 commit 也在 `pinned_commit` 里）。不能单独因为正文相似就放行。
 
-只钉住某一个 `task_commit`，不得据此放行同一份清单里的其他任务。签名也必须覆盖清单文件所在提交，不能只核 `published` 列表的第一项。当前快照还没有做到这一点，所以不能 live，也不能发布可领取清单。生产信任锚要由操作者外带确认，不由任务回执或本协议自动写入。
+r2 之后：只钉住某一个 `task_commit`，只放行 `task_commit` 等于该钉的任务。签名只核清单文件所在提交。清单摘要钉绑定成功时，放行的是这一份清单里的 `published` 任务，不是以后的新清单。
+
+本仓库提交的 `%G?` 仍是 `N`。没有可核验的发布方公钥，因此不能配置持续签名锚。只钉当前清单，下一份清单不会自动受信任。这还不是无人值守。生产信任锚要由操作者自己写入，不由任务回执或本协议自动写入。
 
 本分支已有提交的 `%G?` 为 `N`。在签名审验完成前，不把这些提交当作已签名发布。
 
 ## 清单字段
 
-`manifest/releases.json` 仍未发布。parser 实际接受的字段已经在 `automation/contract/manifest.schema.json`，本协议不另编字段。
+parser 接受的字段以 `automation/contract/manifest.schema.json` 为准，本协议不另编字段。
 
-schema 的 `status` 只有 `published`、`withdrawn`、`draft`。只有 `published` 会被领取。没有「待外带确认、不得执行」这一档。因此空的 `tasks` 数组虽然能被 parser 接受，本轮也不发布它：worker 会从「没有清单」变成「清单已在但没有任务」，这不表示阻塞已经解除。
+schema 没有「待外带确认」这一档。`published` 只表示可以被领取；默认 dry-run 即使信任命中也只记录「将领取」而不执行，信任未配置时 mock 也不领取。这两点已在 r2 快照上测过。live 仍然关闭。
 
-待对齐的只是清单字段。上面各节的 ref、轮询、路径、身份、锁、台账、结果、STOP、执行方式和信任规则已经固定。字段对齐不得改掉这些不变量。
-
-执行方可以在 IOS-002 的回执之外，提交 `automation/contract/` 下的 JSON Schema 和 mock-only 样例。那不是已发布清单，也不能被 worker 当成 `manifest/releases.json` 执行。
+清单里只放 `SMOKE-001`，不把已经完成的 IOS-002 r2 再列成新任务。`IOS-AUTO-SMOKE-001` 这个字符串不符合 `TASK_ID_RE`，所以清单使用 `SMOKE-001`，路径指向 `tasks/IOS-AUTO-SMOKE-001.md`。
 
 ## 当前阻塞
 
-- 没有已发布的 `manifest/releases.json`，worker 不能自动领取。
-- 信任锚未由外带渠道确认。live 保持 blocked，本轮不跑 live smoke。
-- IOS-002 r1 的离线套件已由团队复跑。关键缺陷见 [reviews/IOS-002-r1-6c9888a.md](../reviews/IOS-002-r1-6c9888a.md)。修正任务是 IOS-002 r2，不是把 r1 再执行一遍。
-- 一次外带信任锚确认仍然必须，而且要等 r2 把「单个 task commit 不得放行整份清单」补上之后。该确认和 live smoke 都不在 r2 的授权内。
+- r2 的信任范围缺陷已经复现为修复成立。见 [reviews/IOS-002-r2-9b553fd.md](../reviews/IOS-002-r2-9b553fd.md)。
+- 模型 smoke 还不能跑：用户没有做外带确认，仓库也没有已验证的签名公钥。
+- 只钉当前这一份清单，不能让以后的清单自动受信任。持续自动衔接还做不到。
+- live 保持关闭。手机操作仍未授权。
 
 ## 范围与审批
 

@@ -33,9 +33,8 @@
 - [IOS-001 v1.0](tasks/IOS-001.md) 已验收，结论见 [reviews/IOS-001.md](reviews/IOS-001.md)。
 - [automation/BOOTSTRAP.md](automation/BOOTSTRAP.md) 已受理，限定验收见 [reviews/BOOTSTRAP.md](reviews/BOOTSTRAP.md)。不要重做这份 bootstrap。
 - [IOS-002 r1](tasks/IOS-002.md) 已有回执。验收见 [reviews/IOS-002-r1-6c9888a.md](reviews/IOS-002-r1-6c9888a.md)。离线套件已复现，但不能 live。
-- 一次连接：[automation/CONNECT_ONCE.md](automation/CONNECT_ONCE.md)，父任务 [AUTO-CONNECT-001](tasks/AUTO-CONNECT-001.md)。现有会话读这一次即可，不要逐单复制。
-- [IOS-002 r2](tasks/IOS-002-r2.md) 仍是当前唯一允许执行的子任务。不要重做 bootstrap，不要覆盖 `results/IOS-002/r1/a1.md`。
-- `manifest/releases.json` 仍未发布。信任范围漏洞未修，现在不启用 live。
+- r2 已验收。一次连接仍用 [automation/CONNECT_ONCE.md](automation/CONNECT_ONCE.md)。不要重做 bootstrap，不要覆盖 `results/IOS-002/r1/a1.md`。
+- 只读 smoke 是 [tasks/IOS-AUTO-SMOKE-001.md](tasks/IOS-AUTO-SMOKE-001.md)。默认 dry-run 且信任未配时不执行。现在不要开 live。
 
 ## 执行许可
 

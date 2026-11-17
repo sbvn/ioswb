@@ -11,8 +11,9 @@
 | IOS-001 | v1.0 | 已验收：只读盘点部分通过 | 现状核查、环境/工具清单与稳定性证据整理 | [tasks/IOS-001.md](tasks/IOS-001.md) | [results/IOS-001.md](results/IOS-001.md)（`ce0024b0cb4d42ac5b3da5e50fae9897d1c3c2ec`） | [reviews/IOS-001.md](reviews/IOS-001.md) |
 | BOOTSTRAP | 回执 v1.0 | 限定验收：mock 成果可进入下一阶段 | 离线框架回执（兼容例外，不要求重做） | [automation/BOOTSTRAP.md](automation/BOOTSTRAP.md)（`d6a0c8cc88ec52caf02543e41095ed30e3180f86`） | 该文件即回执 | [reviews/BOOTSTRAP.md](reviews/BOOTSTRAP.md) |
 | IOS-002 | v1 / r1 | 已复跑：不能 live | 自动交接框架的最小协议对齐 | [tasks/IOS-002.md](tasks/IOS-002.md) | [results/IOS-002/r1/a1.md](results/IOS-002/r1/a1.md)（`6c9888abae9b970d2b4af8a3e0d95fd4e53421e1`，原文不改） | [reviews/IOS-002-r1-6c9888a.md](reviews/IOS-002-r1-6c9888a.md) |
-| IOS-002 | v1 / r2 | 已发布 | 收紧清单信任范围 | [tasks/IOS-002-r2.md](tasks/IOS-002-r2.md) | 待现有会话写入 `results/IOS-002/r2/a1.md` | 未验收 |
-| AUTO-CONNECT-001 | v1 / r1 | 已发布 | 一次连接父任务 | [tasks/AUTO-CONNECT-001.md](tasks/AUTO-CONNECT-001.md) | 阶段回执 `results/AUTO-CONNECT-001/r1/a<n>.md` | 未验收 |
+| IOS-002 | v1 / r2 | 已验收：信任范围修复成立，不能 live | 收紧清单信任范围 | [tasks/IOS-002-r2.md](tasks/IOS-002-r2.md) | [results/IOS-002/r2/a1.md](results/IOS-002/r2/a1.md)（`9b553fda23a71007ca741a1d4483a59f197f5de0`） | [reviews/IOS-002-r2-9b553fd.md](reviews/IOS-002-r2-9b553fd.md) |
+| AUTO-CONNECT-001 | v1 / r1 | 已验收：等待器只读，不能 live | 一次连接父任务 | [tasks/AUTO-CONNECT-001.md](tasks/AUTO-CONNECT-001.md) | [a1](results/AUTO-CONNECT-001/r1/a1.md)、[a2](results/AUTO-CONNECT-001/r1/a2.md) | [reviews/AUTO-CONNECT-001-r1-9b553fd.md](reviews/AUTO-CONNECT-001-r1-9b553fd.md) |
+| SMOKE-001 | r1 | 已准备，默认不执行 | IOS-AUTO-SMOKE-001 只读短文本 | [tasks/IOS-AUTO-SMOKE-001.md](tasks/IOS-AUTO-SMOKE-001.md) | 未执行 | 未跑 |
 
 IOS-002 r1：blob SHA-1 `0ff8291afd777d7b64ea13c2480e9ccfca65ec70`；`content_sha256` `c709f134d2846fc51cc3dc1c4ce18f8ddb6f8244490a679ed6549cee7fc28ea8`。两个值不相等，不能互相替代。
 
@@ -22,6 +23,8 @@ AUTO-CONNECT-001 r1：blob SHA-1 `445a6ef779d2758a0d356f92b3fddd85ad17271a`；`c
 
 一次连接说明 [automation/CONNECT_ONCE.md](automation/CONNECT_ONCE.md)：blob SHA-1 `283edb054417adcbc6d08de56ca95429c5a65cd5`；`content_sha256` `e62834c5951193dc5a5b1d6cd8765a5598631051c292704327859100cfe1925e`。
 
+IOS-AUTO-SMOKE-001：blob SHA-1 `1be33135fd636216739f191e3c7cdac39f87c804`；`content_sha256` `aba337481a3912205b3fe826bd05c615b694db1db5ca50f06c6937b3004813f8`。清单 task_id 是 `SMOKE-001`。清单提交和摘要钉在下一提交写入，本行不代替用户确认。
+
 协议：[docs/AUTOMATION_PROTOCOL.md](docs/AUTOMATION_PROTOCOL.md)。唯一读取 ref 是 `cursor/init-collab-docs-2e45`。
 
 ## 当前阶段
@@ -29,10 +32,10 @@ AUTO-CONNECT-001 r1：blob SHA-1 `445a6ef779d2758a0d356f92b3fddd85ad17271a`；`c
 - IOS-001 保持已验收，不重开。
 - bootstrap 回执已受理。不要重做。
 - IOS-002 r1 回执已在。离线套件复跑见验收。不能 live。不要重做 bootstrap，不要覆盖 `a1`。
-- 一次连接父任务 [AUTO-CONNECT-001](tasks/AUTO-CONNECT-001.md) 已发布。用户只把 [automation/CONNECT_ONCE.md](automation/CONNECT_ONCE.md) 交给现有会话一次。不要再逐单复制。
-- IOS-002 r2 仍是父任务里当前唯一允许执行的子任务。已完成或已在跑就不要第二份。r2 原文没有改。
-- `manifest/releases.json` 仍未发布。r2 的信任范围漏洞未修，schema 也没有「待外带确认」状态。不发布可执行清单。
-- live 与生产信任锚仍 blocked。手机操作仍未授权。
+- r2 已验收。信任范围修复成立。不要重跑 r2，不要覆盖 `a1`。
+- [AUTO-CONNECT-001](tasks/AUTO-CONNECT-001.md) 的等待器验收为只读。它不会因为看到 review 就执行新任务。
+- [IOS-AUTO-SMOKE-001](tasks/IOS-AUTO-SMOKE-001.md) 已准备。默认 dry-run、信任未配时不执行。本索引不是用户的外带确认。
+- live 仍不启用。仓库提交未签名，不能做持续签名锚。手机操作仍未授权。
 
 ## IOS-002 v1/r1 授权边界
 
