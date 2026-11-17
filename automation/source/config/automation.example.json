@@ -1,0 +1,51 @@
+{
+  "schema": "ioswb-automation-config/1",
+  "mode": "dry-run",
+  "poll": {
+    "interval_seconds": 60,
+    "jitter_seconds": 5
+  },
+  "repo": {
+    "url": "https://github.com/sbvn/ioswb.git",
+    "branch": "cursor/init-collab-docs-2e45",
+    "manifest_path": "manifest/releases.json",
+    "pause_flag_path": "manifest/PAUSE",
+    "results_root": "results",
+    "allow_main_fallback": false
+  },
+  "scope": {
+    "allowed": ["framework-development", "offline-testing"],
+    "denied_overrides": []
+  },
+  "limits": {
+    "max_attempts_per_revision": 1,
+    "upload_retries": 3,
+    "task_timeout_seconds": 3600,
+    "cancel_grace_seconds": 10,
+    "scan_inflight_seconds": 5
+  },
+  "trust_file": "trust/publishers.json",
+  "harness": {
+    "unattended": {
+      "kind": "dsh-headless",
+      "enabled": false,
+      "product_version_allow": ["0.2.2-rc.3"],
+      "permission_mode": "workspace-write",
+      "approval_policy": "never",
+      "timeout_seconds": 3600,
+      "documented": [
+        "@deepseek-ai/dsh-headless/README.md: dsh --profile headless \"run the tests\"",
+        "@deepseek-ai/dsh-headless/README.md: dsh headless --permission-mode workspace-write --add-dir <git-dir> --json - < task.txt",
+        "@deepseek-ai/dsh/README.md: dsh --profile headless \"job\""
+      ]
+    },
+    "mock": {
+      "enabled": true,
+      "command": ["{PYTHON}", "automation/tests/fake_harness.py"]
+    }
+  },
+  "live": {
+    "enabled": false,
+    "reason": "发布身份信任规则未配置，且发布清单协议尚未由 01 发布"
+  }
+}

@@ -1,0 +1,15 @@
+{
+  "schema": "ioswb-trust/1",
+  "note": "模板：复制为 publishers.json 后填写。至少填一类规则，否则 live 模式拒绝启动。",
+  "allow": {
+    "pinned_manifest_sha256": [
+      "<64 位小写十六进制：操作者用外带渠道核对过 manifest/releases.json 的 sha256>"
+    ],
+    "pinned_commit": [
+      "<40 位小写十六进制：操作者钉住的清单提交或任务提交 SHA>"
+    ],
+    "signed_commit_fingerprints": [
+      "<GPG/SSH 签名指纹，需 git verify-commit 判定为 good>"
+    ]
+  }
+}
