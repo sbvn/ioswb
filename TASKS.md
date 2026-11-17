@@ -8,7 +8,7 @@
 
 | 任务 ID | 版本 | 状态 | 标题 | 任务文件 | 结果 | 验收 |
 | --- | --- | --- | --- | --- | --- | --- |
-| IOS-001 | v1.0 | 已发布 | 现状核查、环境/工具清单与稳定性证据整理 | [tasks/IOS-001.md](tasks/IOS-001.md) | 待用户 Harness 回传 `results/IOS-001.md` | 待验收 `reviews/IOS-001.md` |
+| IOS-001 | v1.0 | 已验收：只读盘点部分通过 | 现状核查、环境/工具清单与稳定性证据整理 | [tasks/IOS-001.md](tasks/IOS-001.md) | [results/IOS-001.md](results/IOS-001.md)（`ce0024b0cb4d42ac5b3da5e50fae9897d1c3c2ec`） | [reviews/IOS-001.md](reviews/IOS-001.md) |
 
 ## IOS-001 v1.0 授权边界
 
