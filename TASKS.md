@@ -15,7 +15,8 @@
 | AUTO-CONNECT-001 | v1 / r1 | 已验收：等待器只读，不能 live | 一次连接父任务 | [tasks/AUTO-CONNECT-001.md](tasks/AUTO-CONNECT-001.md) | [a1](results/AUTO-CONNECT-001/r1/a1.md)、[a2](results/AUTO-CONNECT-001/r1/a2.md) | [reviews/AUTO-CONNECT-001-r1-9b553fd.md](reviews/AUTO-CONNECT-001-r1-9b553fd.md) |
 | SMOKE-001 | r1 | 已撤回；失败台账保留，不可再领取 | IOS-AUTO-SMOKE-001 只读短文本 | [tasks/IOS-AUTO-SMOKE-001.md](tasks/IOS-AUTO-SMOKE-001.md) | [a4](results/AUTHORIZATION-001/r1/a4.md) 自述已消费、未进模型 | [a4 评审](reviews/AUTHORIZATION-001-a4-b7a042f.md) |
 | SMOKE-001 | r2 | 已发布；仅现有会话读交接后可跑一次 | IOS-AUTO-SMOKE-001 只读短文本 r2 | [tasks/IOS-AUTO-SMOKE-001-r2.md](tasks/IOS-AUTO-SMOKE-001-r2.md) | 尚未回传 | 未跑 |
-| SMOKE-002 | v1 / r1 | 已试跑：未通过（凭据缺失，已消费，已回滚） | IOS-AUTO-SMOKE-002 只读短文本（无人值守） | [tasks/IOS-AUTO-SMOKE-002.md](tasks/IOS-AUTO-SMOKE-002.md) | [a1](results/SMOKE-002/r1/a1.md)（`2945536`） | [reviews/SMOKE-002-r1-2945536.md](reviews/SMOKE-002-r1-2945536.md) |
+| SMOKE-002 | v1 / r1 | 已试跑：未通过（凭据缺失，已消费，已回滚） |
+| SMOKE-002 | v1 / r2 | 已发布；自动档无人值守试跑（补凭据口径） | IOS-AUTO-SMOKE-002 只读短文本（无人值守）r2 | [tasks/IOS-AUTO-SMOKE-002-r2.md](tasks/IOS-AUTO-SMOKE-002-r2.md) | 尚未回传 | 未跑 | IOS-AUTO-SMOKE-002 只读短文本（无人值守） | [tasks/IOS-AUTO-SMOKE-002.md](tasks/IOS-AUTO-SMOKE-002.md) | [a1](results/SMOKE-002/r1/a1.md)（`2945536`） | [reviews/SMOKE-002-r1-2945536.md](reviews/SMOKE-002-r1-2945536.md) |
 | AUTO-CONNECT-001 | v1 / r2 | 已验收：补测通过；等待器在 dry-run 下不代跑 | 签名门禁与等待器 | [tasks/AUTO-CONNECT-001-r2.md](tasks/AUTO-CONNECT-001-r2.md) | [results/AUTO-CONNECT-001/r2/a1.md](results/AUTO-CONNECT-001/r2/a1.md)（`8d8ba568293bddfd5c73cd36c7c4b65e89554901`） | [reviews/AUTO-CONNECT-001-r2-8d8ba56.md](reviews/AUTO-CONNECT-001-r2-8d8ba56.md) |
 | AUTHORIZATION-001 | v1 | 成功判定已收紧；r2 交接已发布 |
 | AUTHORIZATION-002 | v1 / r1 | 已验收：local-ack 生效 | Muse 发布钥匙受限信任锚 | [automation/AUTHORIZATION-002.md](automation/AUTHORIZATION-002.md) | [a1](results/AUTHORIZATION-002/r1/a1.md)（`4672e48`） | [reviews/AUTHORIZATION-002-r1-4672e48.md](reviews/AUTHORIZATION-002-r1-4672e48.md) | 用户许可的受限发布公钥 | [automation/AUTHORIZATION-001.md](automation/AUTHORIZATION-001.md) | [a4](results/AUTHORIZATION-001/r1/a4.md)（`b7a042f`，未覆盖） | [a4 评审](reviews/AUTHORIZATION-001-a4-b7a042f.md) |
@@ -33,6 +34,8 @@ IOS-AUTO-SMOKE-001 r1：blob SHA-1 `1be33135fd636216739f191e3c7cdac39f87c804`；
 SMOKE-001 r2：blob SHA-1 `856fa45a0308192ced393f5320e9d9258a8f306d`；`content_sha256` `a891b81c341e610f7c5154ef15b024ba8d2cb816f0d6b474ed08b25f7874cf44`。任务提交 `664d95e825e141228080e12a193bac90bb38b12a`。修复提交 `abd57261a0ef6701294e13b69378fa8a49b9f0fd`。一次交接：[automation/SMOKE-001-r2-RUN-ONCE.md](automation/SMOKE-001-r2-RUN-ONCE.md)。
 
 SMOKE-002 r1：blob SHA-1 `a52822a605e1f9dc1e4115043a983ee86b9ef4a1`；`content_sha256` `994f23df0e4de0594742b496b062f6bce1ccd8dd2d7e3a427abef9338b1ead62`。任务提交 `f50b88226ae2df0addc553e7210f6653624cd1e7`。分级自动派发见 [docs/AUTO_DISPATCH.md](docs/AUTO_DISPATCH.md)（用户 2026-11-17 拍板：低风险自动跑、碰手机仍一次一单）；本机一次开启见 [automation/AUTO-ENABLE-ONCE.md](automation/AUTO-ENABLE-ONCE.md)；Muse 发布钥匙信任加入见 [automation/AUTHORIZATION-002.md](automation/AUTHORIZATION-002.md)（状态 `issued-awaiting-local-ack`，本机回执前不得领取 Muse 签名的清单）。SMOKE-002 发布后不发任何交接消息，等待器自动领取才算试跑成立。
+
+SMOKE-002 r2：blob SHA-1 `10771b6ab0efbf21cafa87dd9f99c37d3e794317`；`content_sha256` `aeda100ab2f7c56324531cd9683d705814bc54012182fd99438fa1512d302138`。任务提交 `bd0ca393fe61a1d74c961a19f8c8938840f079b0`。r1 清单状态已转 `withdrawn`（已消费，任务字节未改）。开启口径见 [automation/AUTO-ENABLE-R2.md](automation/AUTO-ENABLE-R2.md)：用户 2026-11-17 选 patch 补丁方式，`patch_files=["state/auto-auth.patch.yml"]` 覆盖常驻每一轮；回滚须同时删除该引用与补丁文件。
 
 清单文件提交 `216465021b5468e954a61eb8f4b75de5c01c3fe1`。外带锚只有这一条，而且本行不是用户已经确认：
 
