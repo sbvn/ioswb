@@ -15,7 +15,7 @@
 | AUTO-CONNECT-001 | v1 / r1 | 已验收：等待器只读，不能 live | 一次连接父任务 | [tasks/AUTO-CONNECT-001.md](tasks/AUTO-CONNECT-001.md) | [a1](results/AUTO-CONNECT-001/r1/a1.md)、[a2](results/AUTO-CONNECT-001/r1/a2.md) | [reviews/AUTO-CONNECT-001-r1-9b553fd.md](reviews/AUTO-CONNECT-001-r1-9b553fd.md) |
 | SMOKE-001 | r1 | 已准备，默认不执行 | IOS-AUTO-SMOKE-001 只读短文本 | [tasks/IOS-AUTO-SMOKE-001.md](tasks/IOS-AUTO-SMOKE-001.md) | 未执行 | 未跑 |
 | AUTO-CONNECT-001 | v1 / r2 | 已验收：补测通过；等待器在 dry-run 下不代跑 | 签名门禁与等待器 | [tasks/AUTO-CONNECT-001-r2.md](tasks/AUTO-CONNECT-001-r2.md) | [results/AUTO-CONNECT-001/r2/a1.md](results/AUTO-CONNECT-001/r2/a1.md)（`8d8ba568293bddfd5c73cd36c7c4b65e89554901`） | [reviews/AUTO-CONNECT-001-r2-8d8ba56.md](reviews/AUTO-CONNECT-001-r2-8d8ba56.md) |
-| AUTHORIZATION-001 | v1 | 01 已确认补测；smoke 未消费 | 用户许可的受限发布公钥 | [automation/AUTHORIZATION-001.md](automation/AUTHORIZATION-001.md) | [a1](results/AUTHORIZATION-001/r1/a1.md)、[a2](results/AUTHORIZATION-001/r1/a2.md)；下一步 `a3` | [reviews/AUTHORIZATION-001-r1-c41d975.md](reviews/AUTHORIZATION-001-r1-c41d975.md) |
+| AUTHORIZATION-001 | v1 | 01 已确认补测；a3 自述未启动 | 用户许可的受限发布公钥 | [automation/AUTHORIZATION-001.md](automation/AUTHORIZATION-001.md) | [a1](results/AUTHORIZATION-001/r1/a1.md)、[a2](results/AUTHORIZATION-001/r1/a2.md)、[a3](results/AUTHORIZATION-001/r1/a3.md)（`0934e2f`） | [a3 评审](reviews/AUTHORIZATION-001-a3-0934e2f.md) |
 
 IOS-002 r1：blob SHA-1 `0ff8291afd777d7b64ea13c2480e9ccfca65ec70`；`content_sha256` `c709f134d2846fc51cc3dc1c4ce18f8ddb6f8244490a679ed6549cee7fc28ea8`。两个值不相等，不能互相替代。
 
@@ -44,7 +44,8 @@ IOS-AUTO-SMOKE-001：blob SHA-1 `1be33135fd636216739f191e3c7cdac39f87c804`；`co
 - [AUTO-CONNECT-001](tasks/AUTO-CONNECT-001.md) 的等待器验收为只读。它不会因为看到 review 就执行新任务。
 - [IOS-AUTO-SMOKE-001](tasks/IOS-AUTO-SMOKE-001.md) 已准备。默认 dry-run、信任未配时不执行。本索引不是用户的外带确认。
 - live 仍不启用。签名证据见 [reviews/SIGNATURE-77998e8.md](reviews/SIGNATURE-77998e8.md)。本索引不是用户的外带确认。手机操作仍未授权。
-- 桥接补测已由 01 确认。本机可对 `SMOKE-001` 做一次最多 120 秒的 headless，然后恢复 `dry-run`。`connect_wait.py` 在 `dry-run` 且没有 `--dispatch` 时不会自己调用 Worker。smoke 尚未有回执。
+- 桥接补测已由 01 确认。a3 自述 smoke 未启动、无 claim，仍是 `dry-run`。云端未核对本机磁盘。
+- 局部登录补充：[automation/AUTHORIZATION-001-LOCAL-AUTH.md](automation/AUTHORIZATION-001-LOCAL-AUTH.md)，blob SHA-1 `6e8473cccafad9252b9f231ec4a06423a4d5020c`。现有 worker 不透传 `--patch`。等待器不会因这份文件自己执行。下一步回执是 `results/AUTHORIZATION-001/r1/a4.md`。
 
 ## IOS-002 v1/r1 授权边界
 

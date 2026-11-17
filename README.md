@@ -34,7 +34,7 @@
 - [automation/BOOTSTRAP.md](automation/BOOTSTRAP.md) 已受理，限定验收见 [reviews/BOOTSTRAP.md](reviews/BOOTSTRAP.md)。不要重做这份 bootstrap。
 - [IOS-002 r1](tasks/IOS-002.md) 已有回执。验收见 [reviews/IOS-002-r1-6c9888a.md](reviews/IOS-002-r1-6c9888a.md)。离线套件已复现，但不能 live。
 - r2 已验收。一次连接仍用 [automation/CONNECT_ONCE.md](automation/CONNECT_ONCE.md)。不要重做 bootstrap，不要覆盖 `results/IOS-002/r1/a1.md`。
-- 桥接补测已确认。本机可对 `SMOKE-001` 做一次最多 120 秒的 headless，然后恢复 `dry-run`。等待器在 `dry-run` 下不会代跑。smoke 尚无回执。
+- a3 自述 smoke 未启动。局部登录补充见 [automation/AUTHORIZATION-001-LOCAL-AUTH.md](automation/AUTHORIZATION-001-LOCAL-AUTH.md)。等待器在 `dry-run` 下不会代跑。
 
 ## 执行许可
 
