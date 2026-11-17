@@ -152,6 +152,8 @@ def scan(cfg) -> dict:
         "reviews": reviews,
         "bridge_reviews": bridge_reviews,
         "smoke_reviews": smoke_reviews,
+        "bridge_receipt_present": "results/AUTO-CONNECT-001/r2/a1.md" in files,
+        "auth_receipt_present": "results/AUTHORIZATION-001/r1/a2.md" in files,
         "r2_receipt_present": "results/IOS-002/r2/a1.md" in files,
         "tasks_row": [line.strip() for line in tasks_md.splitlines()
                       if line.strip().startswith("| AUTO-CONNECT-001") and "r2" in line][:1],
@@ -161,11 +163,13 @@ def scan(cfg) -> dict:
 def decide(snap: dict, stopped: bool) -> tuple[str, str]:
     if stopped:
         return "stopped", "本机 STOP"
+    if not snap.get("bridge_receipt_present"):
+        return "3", "桥接实现中（尚未提交）"
     if snap["smoke_reviews"]:
         return "5", "01 已出 smoke 相关验收"
     if snap["bridge_reviews"]:
-        return "4", "桥接已实现，等待用户外带确认或 01 的 smoke 授权"
-    return "3", "桥接实现中（尚未提交）"
+        return "4", "等待用户外带确认 / 01 的 smoke 授权"
+    return "4", "01 对桥接补测的独立确认"
 
 
 def main(argv: list[str] | None = None) -> int:

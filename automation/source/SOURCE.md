@@ -40,7 +40,7 @@
 | `automation/source/bin/dsh_worker.py` | 62 | `44d3ee169472ab465e2667c43a72fafdafdeea0727f710d517a286ed24b9fff4` |
 | `automation/source/bin/dsh_control.py` | 58 | `f595d8464337a439b9df6c62b8e86d4b5c468b150d9543422aa3f961624c5832` |
 | `automation/source/bin/setup_mock_lab.py` | 175 | `0f4e9d1a2329d74a8c6d0bc5d558747acd7bf83da5be1dd4c0a86b2b0676f989` |
-| `automation/source/bin/connect_wait.py` | 315 | `9a985a0cf61d7c46331b2c2833ffcf2963492bd81ee0c5ba685daa6890ecc1d3` |
+| `automation/source/bin/connect_wait.py` | 319 | `baf5cc6410c9438f6246583b19268a91749e14ee41134eb1528fa58813d0a399` |
 | `automation/source/tests/lab.py` | 383 | `ac619f334d6ed631a79b73a894c469ce1a468e1bd801021269548f4adcd0ed1b` |
 | `automation/source/tests/run_tests.py` | 844 | `34f9bbcb345a5a8fd0e5f4942fceabe40252b222f64e13d31a0996dee45a70e0` |
 | `automation/source/tests/fake_harness.py` | 100 | `6143d68c2e40c3f4a70a170c3ed108042cc8c9948ce097edfdde8c2c32ce1108` |
