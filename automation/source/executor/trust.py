@@ -19,6 +19,7 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from .common import SCHEMA_TRUST, SHA40_RE, SHA64_RE, TrustError
+from .sigverify import SignerRule, load_signers, normalize_fingerprint
 
 RULE_KINDS = ("pinned_manifest_sha256", "pinned_commit", "signed_commit_fingerprints")
 
@@ -28,10 +29,11 @@ class TrustConfig:
     path: str
     rules: dict[str, list[str]] = field(default_factory=dict)
     raw: dict[str, Any] = field(default_factory=dict)
+    signers: list[SignerRule] = field(default_factory=list)
 
     @property
     def configured(self) -> bool:
-        return any(bool(self.rules.get(kind)) for kind in RULE_KINDS)
+        return any(bool(self.rules.get(kind)) for kind in RULE_KINDS) or bool(self.signers)
 
     def describe(self) -> str:
         if not self.configured:
@@ -41,6 +43,8 @@ class TrustConfig:
             values = self.rules.get(kind) or []
             if values:
                 parts.append("%s=%d 条" % (kind, len(values)))
+        if self.signers:
+            parts.append("signers=%d 条" % len(self.signers))
         return "，".join(parts)
 
 
@@ -93,7 +97,8 @@ def load_trust(path) -> TrustConfig:
             if kind == "pinned_commit" and not re.match(SHA40_RE, value.lower()):
                 raise TrustError("allow.pinned_commit 含非 40 位 SHA: %s" % value[:12])
         rules[kind] = [v.lower() for v in cleaned] if kind != "signed_commit_fingerprints" else cleaned
-    return TrustConfig(path=str(p), rules=rules, raw=payload)
+    signers = load_signers(payload)
+    return TrustConfig(path=str(p), rules=rules, raw=payload, signers=signers)
 
 
 def evaluate_manifest(
@@ -139,13 +144,20 @@ def evaluate_manifest(
     if manifest_commit and manifest_commit in pinned_commits:
         return TrustDecision(True, "pinned_commit:manifest", [], scope="manifest")
 
-    fingerprints = [f.replace(" ", "").lower()
-                    for f in (trust.rules.get("signed_commit_fingerprints") or [])]
-    if fingerprints and manifest_signature:
-        status = manifest_signature.get("status")
-        fp = (manifest_signature.get("fingerprint") or "").replace(" ", "").lower()
-        if status == "good" and fp and fp in fingerprints:
+    fingerprints = [normalize_fingerprint(f) for f in
+                    (trust.rules.get("signed_commit_fingerprints") or [])]
+    if manifest_signature and manifest_signature.get("status") == "good":
+        verified_fp = normalize_fingerprint(manifest_signature.get("fingerprint"))
+        verified_identity = (manifest_signature.get("identity") or "").strip()
+        # 钉住的公钥（含身份与指纹）优先；crypto 校验由 sigverify 完成，这里只做匹配。
+        for signer in trust.signers:
+            if normalize_fingerprint(signer.fingerprint) != verified_fp:
+                continue
+            if verified_identity and verified_identity != signer.identity:
+                continue
             return TrustDecision(True, "signed_manifest_commit", [], scope="manifest")
+        if verified_fp and verified_fp in fingerprints:
+            return TrustDecision(True, "signed_commit_fingerprints", [], scope="manifest")
 
     reasons = ["清单摘要、清单提交 SHA、清单提交签名均不匹配本机信任规则"]
     if unbound_reason:

@@ -19,6 +19,7 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+import subprocess
 import sys
 import time
 import traceback
@@ -674,6 +675,132 @@ def test_trust_api_separates_manifest_and_task_scope():
     check(trust_mod.evaluate_task(bound, task_commit=pinned_b,
                                   manifest_decision=ok_manifest).trusted is True,
           "清单级信任时任务级应放行")
+
+
+# ---------------------------------------------------------------- 桥接（AUTO-CONNECT-001 r2）
+
+def _signing_key(lab: Lab, tag: str = "signkey"):
+    """生成一次性 ed25519 签名密钥，返回 (私钥路径, 公钥行, 指纹)。"""
+    key = lab.root / tag
+    subprocess.run(["ssh-keygen", "-t", "ed25519", "-N", "", "-C", "01-mock@example.invalid",
+                    "-f", str(key)], check=True, capture_output=True)
+    pub_path = lab.root / (tag + ".pub")
+    public_key = pub_path.read_text(encoding="utf-8").strip()
+    listing = subprocess.run(["ssh-keygen", "-lf", str(pub_path)], capture_output=True,
+                             text=True, encoding="utf-8").stdout
+    fingerprint = "SHA256:" + listing.split("SHA256:")[1].split()[0]
+    return key, public_key, fingerprint
+
+
+@test
+def test_signature_gate_accepts_pinned_signer():
+    """清单提交的 SSH 签名由钉住公钥验过才允许执行。"""
+    lab = Lab("sig_ok")
+    key, public_key, fingerprint = _signing_key(lab)
+    lab.sign_key = key
+    lab.plan_task("MOCK-201", mock={"sleep_ms": 50, "receipt": CLEAN_RECEIPT})
+    lab.publish()
+    lab.write_trust(signers=[{"identity": "01-mock@example.invalid",
+                              "public_key": public_key,
+                              "fingerprint": fingerprint}])
+    lab.write_config(mode="mock")
+    proc = lab.run_worker("--once")
+    check(proc.returncode == 0, "签名通过时应正常执行\n%s" % proc.stdout)
+    check(lab.exec_starts() == 1, "应执行 1 次，实际 %d" % lab.exec_starts())
+    trust_ok = lab.events("trust_ok")
+    check(trust_ok and trust_ok[-1].get("rule") == "signed_manifest_commit",
+          "应记录 signed_manifest_commit，实际 %s"
+          % ([e.get("rule") for e in trust_ok],))
+
+
+@test
+def test_signature_gate_rejects_unpinned_signer():
+    """签名指纹不符则不领取（换一把公钥钉住即可复现）。"""
+    lab = Lab("sig_bad")
+    good_key, good_pub, good_fp = _signing_key(lab, "goodkey")
+    other_key, other_pub, other_fp = _signing_key(lab, "otherkey")
+    lab.sign_key = good_key                      # 提交用 goodkey 签
+    lab.plan_task("MOCK-202", mock={"sleep_ms": 50, "receipt": CLEAN_RECEIPT})
+    lab.publish()
+    # 但本机钉的是另一把公钥
+    lab.write_trust(signers=[{"identity": "01-mock@example.invalid",
+                              "public_key": other_pub,
+                              "fingerprint": other_fp}])
+    lab.write_config(mode="mock")
+    proc = lab.run_worker("--once")
+    check(proc.returncode == 0, "签名不符时应平稳等待\n%s" % proc.stdout)
+    check(lab.exec_starts() == 0, "签名不符不得领取，实际执行 %d" % lab.exec_starts())
+    refused = lab.events("refused_untrusted")
+    check(refused, "应记录 refused_untrusted")
+    check(not lab.remote_has("results/MOCK-202/r1/a1.md"), "不得产出回执")
+
+
+@test
+def test_waiter_stop_blocks_scanning_and_persists():
+    """等待器每轮先读 STOP；STOP 跨重启有效；命中时退出码 4 且不扫描。"""
+    lab = Lab("waiter_stop")
+    lab.plan_task("MOCK-301", mock={"sleep_ms": 50, "receipt": CLEAN_RECEIPT})
+    lab.publish()
+    lab.pin_manifest()
+    lab.write_config(mode="mock")
+    lab.stop("waiter stop test")
+
+    first = lab.run_waiter()
+    check(first.returncode == 4, "STOP 时等待器应退出 4，实际 %s\n%s"
+          % (first.returncode, first.stdout))
+    check("已停止，不是常驻" in (first.stdout + first.stderr), "应写明已停止、不是常驻")
+    check([r for r in lab.waiter_ledger() if r.get("event") == "scan_ok"] == [],
+          "STOP 时不得扫描")
+    status = json.loads((lab.root / "state" / "connect" / "status.json").read_text(encoding="utf-8"))
+    check(status.get("stop_seen") is True and status.get("running") is False,
+          "状态应为 stop_seen 且不再 running")
+
+    second = lab.run_waiter()
+    check(second.returncode == 4, "重启后 STOP 仍然有效")
+    check(second.stdout.count("已停止，不是常驻") >= 1, "重启后仍应写明已停止")
+
+    lab.resume()
+    third = lab.run_waiter()
+    check(third.returncode == 0, "去掉 STOP 后应正常扫描\n%s" % third.stdout)
+    check([r for r in lab.waiter_ledger() if r.get("event") == "scan_ok"], "应恢复扫描")
+
+
+@test
+def test_completed_task_not_started_again_by_manifest():
+    """清单里已有且已完成的 IOS-002 不得再次领取；只执行未完成的任务。"""
+    lab = Lab("no_reclaim")
+    lab.plan_task("IOS-002", mock={"sleep_ms": 50, "receipt": CLEAN_RECEIPT})
+    lab.plan_task("SMOKE-001", mock={"sleep_ms": 50, "receipt": CLEAN_RECEIPT})
+    lab.publish()
+    lab.pin_manifest()
+    lab.write_config(mode="mock")
+    for _ in range(3):
+        lab.run_worker("--once")
+    claimed = [e.get("attempt") for e in lab.events("claim")]
+    check(claimed == ["IOS-002@r1", "SMOKE-001@r1"], "领取顺序/数量不符: %s" % claimed)
+    check(lab.exec_starts() == 2, "只应执行 2 次，实际 %d" % lab.exec_starts())
+
+
+@test
+def test_headless_command_uses_fresh_session():
+    """fresh headless：每任务新会话，不传 --session-id。"""
+    from executor.config import load_config
+    from executor.runner import HeadlessRunner
+
+    lab = Lab("fresh_session")
+    lab.plan_task("MOCK-401", mock={"sleep_ms": 10, "receipt": CLEAN_RECEIPT})
+    lab.publish()
+    lab.pin_manifest()
+    lab.write_config(mode="mock")
+    cfg = load_config(lab.config_path)
+    runner = HeadlessRunner(cfg, lab.root / "state" / "attempts" / "x",
+                            {"node_executable": "node", "bin_js": "bin.js"})
+    cmd, stdin_text, _env = runner.build({"context_text": "任务正文", "task_text": "任务正文"}, {})
+    check("--session-id" not in cmd, "不得传 --session-id：%s" % cmd)
+    check("--profile" in cmd and cmd[cmd.index("--profile") + 1] == "headless",
+          "应使用 headless profile：%s" % cmd)
+    check("--json" in cmd, "应以 --json 输出事件流")
+    check(stdin_text == "任务正文", "任务应从 stdin 传入")
 
 
 # ---------------------------------------------------------------- 运行器

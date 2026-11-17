@@ -49,6 +49,7 @@ from .locking import ProcessLock
 from .manifest import TaskEntry, parse_manifest, verify_task_binding
 from .redact import scan as scan_receipt
 from .runner import HeadlessRunner, MockRunner, probe_product
+from .sigverify import verify_commit_signature
 from .trust import evaluate_manifest, evaluate_task
 from .trust import load_trust
 
@@ -183,7 +184,12 @@ class Worker:
         manifest_commit = self.repo.file_commit(head, cfg.manifest_path) or head
         trust_cfg = load_trust(cfg.trust_file)
         published = manifest.published()
-        manifest_signature = self.repo.verify_signature(manifest_commit) if manifest_commit else None
+        # SSH 签名核验（不是 %G?=N 就放行）：用本机钉住的公钥 / 身份 / 指纹
+        manifest_signature = None
+        if manifest_commit:
+            manifest_signature = verify_commit_signature(
+                self.repo.ensure_clone(), manifest_commit, trust_cfg.signers,
+                repo_url=cfg.repo_url, ref=cfg.repo_branch).as_dict()
         manifest_decision = evaluate_manifest(
             trust_cfg,
             manifest_sha256=manifest.raw_sha256,

@@ -281,8 +281,9 @@ def _validate_mode(cfg: Config) -> None:
         try:
             trust_cfg = json.loads(cfg.trust_file.read_text(encoding="utf-8"))
             allow = (trust_cfg or {}).get("allow") or {}
+            signers = (trust_cfg or {}).get("signers") or []
             if not any(allow.get(k) for k in ("pinned_manifest_sha256", "pinned_commit",
-                                              "signed_commit_fingerprints")):
+                                              "signed_commit_fingerprints")) and not signers:
                 problems.append("本机信任规则未配置")
         except Exception:  # noqa: BLE001
             problems.append("信任文件缺失或不可读: %s" % cfg.trust_file)

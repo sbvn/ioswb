@@ -53,7 +53,8 @@ def _force_rmtree(path: Path) -> None:
 
 
 class Lab:
-    def __init__(self, name: str, *, checked_out_remote: bool = False) -> None:
+    def __init__(self, name: str, *, checked_out_remote: bool = False,
+                 sign_key: Path | None = None) -> None:
         self.name = name
         self.root = WORK_ROOT / name
         if self.root.exists():
@@ -63,6 +64,7 @@ class Lab:
         self.exec_log = self.root / "exec.log"
         self.config_path = self.root / "config" / "automation.json"
         self.trust_path = self.root / "config" / "trust" / "publishers.json"
+        self.sign_key = sign_key
         self._tasks: list[dict] = []
         self.checked_out_remote = checked_out_remote
         self.manifest_commit: str | None = None
@@ -70,12 +72,20 @@ class Lab:
 
     # ---------------------------------------------------------- 远端
 
+    def commit_all(self, message: str) -> None:
+        args = ["commit", "-q", "-m", message]
+        if self.sign_key:
+            # git 的 -c 必须位于子命令之前
+            args = (["-c", "gpg.format=ssh",
+                     "-c", "user.signingkey=%s" % self.sign_key] + args + ["-S"])
+        _git(args, self.remote)
+
     def _init_remote(self) -> None:
         self.remote.mkdir(parents=True, exist_ok=True)
         _git(["init", "-q", "-b", BRANCH, "."], self.remote)
         (self.remote / "README.md").write_bytes(b"# mock collab repo\n")
         _git(["add", "-A"], self.remote)
-        _git(["commit", "-q", "-m", "init"], self.remote)
+        self.commit_all("init")
 
     def plan_task(self, task_id: str, *, revision: int = 1, scopes=("offline-testing",),
                   body: str | None = None, status: str = "published",
@@ -92,7 +102,7 @@ class Lab:
         commit_sha = ""
         if commit:
             _git(["add", "-A"], self.remote)
-            _git(["commit", "-q", "-m", "task %s" % task_id], self.remote)
+            self.commit_all("task %s" % task_id)
             commit_sha = _git(["rev-parse", "HEAD"], self.remote).stdout.strip()
         import hashlib
 
@@ -126,7 +136,7 @@ class Lab:
         target.parent.mkdir(parents=True, exist_ok=True)
         target.write_bytes(data)
         _git(["add", "-A"], self.remote)
-        _git(["commit", "-q", "-m", "manifest"], self.remote)
+        self.commit_all("manifest")
         sha = _git(["rev-parse", "HEAD"], self.remote).stdout.strip()
         self.manifest_commit = sha
         if not self.checked_out_remote:
@@ -151,7 +161,7 @@ class Lab:
         elif path.exists():
             path.unlink()
         _git(["add", "-A"], self.remote)
-        _git(["commit", "-q", "-m", "pause %s" % present], self.remote)
+        self.commit_all("pause %s" % present)
         head = _git(["rev-parse", "HEAD"], self.remote).stdout.strip()
         if not self.checked_out_remote:
             _git(["checkout", "-q", "--detach"], self.remote)
@@ -167,7 +177,7 @@ class Lab:
         target.parent.mkdir(parents=True, exist_ok=True)
         target.write_text(text, encoding="utf-8", newline="\n")
         _git(["add", "-A"], self.remote)
-        _git(["commit", "-q", "-m", "forge %s" % rel_path], self.remote)
+        self.commit_all("forge %s" % rel_path)
         head = _git(["rev-parse", "HEAD"], self.remote).stdout.strip()
         if not self.checked_out_remote:
             _git(["checkout", "-q", "--detach"], self.remote)
@@ -177,7 +187,8 @@ class Lab:
     # ---------------------------------------------------------- 信任 / 配置
 
     def write_trust(self, pins: list[str] | None = None, commits: list[str] | None = None,
-                    fingerprints: list[str] | None = None) -> None:
+                    fingerprints: list[str] | None = None,
+                    signers: list[dict] | None = None) -> None:
         payload = {
             "schema": "ioswb-trust/1",
             "allow": {
@@ -186,6 +197,8 @@ class Lab:
                 "signed_commit_fingerprints": fingerprints or [],
             },
         }
+        if signers is not None:
+            payload["signers"] = signers
         self.trust_path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
 
     def pin_manifest(self, *, bound: bool = True) -> None:
@@ -262,6 +275,22 @@ class Lab:
         cmd = [sys.executable, str(WORKER_BIN), "--config", str(self.config_path)] + list(extra)
         return subprocess.run(cmd, capture_output=True, text=True, encoding="utf-8",
                               errors="replace", env=self._env(extra_env), timeout=timeout)
+
+    def run_waiter(self, *extra: str, timeout: float = 180.0,
+                   extra_env: dict | None = None) -> subprocess.CompletedProcess:
+        waiter = AUTOMATION_ROOT / "bin" / "connect_wait.py"
+        state_dir = self.root / "state" / "connect"
+        cmd = [sys.executable, str(waiter), "--config", str(self.config_path),
+               "--state-dir", str(state_dir), "--once"] + list(extra)
+        return subprocess.run(cmd, capture_output=True, text=True, encoding="utf-8",
+                              errors="replace", env=self._env(extra_env), timeout=timeout)
+
+    def waiter_ledger(self) -> list[dict]:
+        path = self.root / "state" / "connect" / "scan.jsonl"
+        if not path.exists():
+            return []
+        return [json.loads(line) for line in path.read_text(encoding="utf-8").splitlines()
+                if line.strip()]
 
     def start_worker(self, *extra: str, extra_env: dict | None = None) -> subprocess.Popen:
         cmd = [sys.executable, str(WORKER_BIN), "--config", str(self.config_path)] + list(extra)
