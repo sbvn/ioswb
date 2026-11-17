@@ -34,7 +34,7 @@
 - [automation/BOOTSTRAP.md](automation/BOOTSTRAP.md) 已受理，限定验收见 [reviews/BOOTSTRAP.md](reviews/BOOTSTRAP.md)。不要重做这份 bootstrap。
 - [IOS-002 r1](tasks/IOS-002.md) 已有回执。验收见 [reviews/IOS-002-r1-6c9888a.md](reviews/IOS-002-r1-6c9888a.md)。离线套件已复现，但不能 live。
 - r2 已验收。一次连接仍用 [automation/CONNECT_ONCE.md](automation/CONNECT_ONCE.md)。不要重做 bootstrap，不要覆盖 `results/IOS-002/r1/a1.md`。
-- a3 自述 smoke 未启动。局部登录补充见 [automation/AUTHORIZATION-001-LOCAL-AUTH.md](automation/AUTHORIZATION-001-LOCAL-AUTH.md)。等待器在 `dry-run` 下不会代跑。
+- a4 自述 r1 已消费但未进入模型。成功判定尚未按 `final.reason.kind == completed` 收紧，SMOKE-001 r2 未发布。
 
 ## 执行许可
 
