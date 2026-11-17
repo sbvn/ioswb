@@ -87,7 +87,7 @@ r2 之后：只钉住某一个 `task_commit`，只放行 `task_commit` 等于该
 
 本机 `git log %G?` 曾显示 `N`，同时打印 `gpg.ssh.allowedSignersFile` 未配置。这不能写成「公开提交没有签名」。`77998e8`、`2164650`、`8e9bcfb`、`f3eebdb` 的提交对象里有 `gpgsig` SSH 签名，与 GitHub API 的 `verification.signature` 一致；API 的 `verified=true`、`reason=valid`。用签名内的公钥做 `ssh-keygen -Y verify` 结果为 Good。指纹和限制见 [reviews/SIGNATURE-77998e8.md](../reviews/SIGNATURE-77998e8.md)。绿勾和作者名本身不是信任锚。
 
-持续发布要等用户一次外带确认这把公钥。确认前不写 `config/trust/`，不启用 live。只钉一份清单摘要不能代替这把密钥；确认之后，同一公钥签的后续清单提交才可以继续，不必每份清单重新人工钉摘要。当前 worker 还不会做这件校验。
+用户已许可本机把该公钥配成受限信任锚，见 [automation/AUTHORIZATION-001.md](../automation/AUTHORIZATION-001.md)。状态是 `issued-awaiting-local-ack`：云端不写本机 `config/trust/`。本机在自己的回执写明指纹之前，不能把同仓任意内容当成已受信。当前 worker 还不会用这把公钥做校验。
 
 ## 清单字段
 
@@ -100,9 +100,9 @@ schema 没有「待外带确认」这一档。`published` 只表示可以被领�
 ## 当前阻塞
 
 - r2 的信任范围缺陷已经复现为修复成立。见 [reviews/IOS-002-r2-9b553fd.md](../reviews/IOS-002-r2-9b553fd.md)。
-- 模型 smoke 还不能跑：用户没有做外带确认，仓库也没有已验证的签名公钥。
-- 只钉当前这一份清单，不能让以后的清单自动受信任。持续自动衔接还做不到。
-- live 保持关闭。手机操作仍未授权。
+- 用户已明确许可本机配置已核验的发布公钥，见 [automation/AUTHORIZATION-001.md](../automation/AUTHORIZATION-001.md)。状态是 `issued-awaiting-local-ack`。云端没有替本机写入信任，smoke 也没有跑。
+- 同一公钥验签可以通过后续清单提交，但现有等待器只扫描、不执行、不读 STOP。这是衔接还没打通的原因。
+- 代码里的 `live` 不是手机权限。现在保持 `dry-run`。手机操作仍未授权。
 
 ## 范围与审批
 

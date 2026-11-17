@@ -34,7 +34,7 @@
 - [automation/BOOTSTRAP.md](automation/BOOTSTRAP.md) 已受理，限定验收见 [reviews/BOOTSTRAP.md](reviews/BOOTSTRAP.md)。不要重做这份 bootstrap。
 - [IOS-002 r1](tasks/IOS-002.md) 已有回执。验收见 [reviews/IOS-002-r1-6c9888a.md](reviews/IOS-002-r1-6c9888a.md)。离线套件已复现，但不能 live。
 - r2 已验收。一次连接仍用 [automation/CONNECT_ONCE.md](automation/CONNECT_ONCE.md)。不要重做 bootstrap，不要覆盖 `results/IOS-002/r1/a1.md`。
-- 只读 smoke 是 [tasks/IOS-AUTO-SMOKE-001.md](tasks/IOS-AUTO-SMOKE-001.md)。默认 dry-run 且信任未配时不执行。现在不要开 live。
+- 用户许可见 [automation/AUTHORIZATION-001.md](automation/AUTHORIZATION-001.md)，状态 `issued-awaiting-local-ack`。本机尚未确认。smoke 仍未跑。
 
 ## 执行许可
 

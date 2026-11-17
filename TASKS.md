@@ -15,6 +15,7 @@
 | AUTO-CONNECT-001 | v1 / r1 | 已验收：等待器只读，不能 live | 一次连接父任务 | [tasks/AUTO-CONNECT-001.md](tasks/AUTO-CONNECT-001.md) | [a1](results/AUTO-CONNECT-001/r1/a1.md)、[a2](results/AUTO-CONNECT-001/r1/a2.md) | [reviews/AUTO-CONNECT-001-r1-9b553fd.md](reviews/AUTO-CONNECT-001-r1-9b553fd.md) |
 | SMOKE-001 | r1 | 已准备，默认不执行 | IOS-AUTO-SMOKE-001 只读短文本 | [tasks/IOS-AUTO-SMOKE-001.md](tasks/IOS-AUTO-SMOKE-001.md) | 未执行 | 未跑 |
 | AUTO-CONNECT-001 | v1 / r2 | 已发布 | 签名门禁与等待器 | [tasks/AUTO-CONNECT-001-r2.md](tasks/AUTO-CONNECT-001-r2.md) | 待本机实现后写 `results/AUTO-CONNECT-001/r2/a1.md` | 未验收 |
+| AUTHORIZATION-001 | v1 | issued-awaiting-local-ack | 用户许可的受限发布公钥 | [automation/AUTHORIZATION-001.md](automation/AUTHORIZATION-001.md) | 本机回执 `results/AUTHORIZATION-001/r1/a1.md`（尚未出现） | 未验收 |
 
 IOS-002 r1：blob SHA-1 `0ff8291afd777d7b64ea13c2480e9ccfca65ec70`；`content_sha256` `c709f134d2846fc51cc3dc1c4ce18f8ddb6f8244490a679ed6549cee7fc28ea8`。两个值不相等，不能互相替代。
 
@@ -44,6 +45,7 @@ IOS-AUTO-SMOKE-001：blob SHA-1 `1be33135fd636216739f191e3c7cdac39f87c804`；`co
 - [IOS-AUTO-SMOKE-001](tasks/IOS-AUTO-SMOKE-001.md) 已准备。默认 dry-run、信任未配时不执行。本索引不是用户的外带确认。
 - live 仍不启用。签名证据见 [reviews/SIGNATURE-77998e8.md](reviews/SIGNATURE-77998e8.md)。本索引不是用户的外带确认。手机操作仍未授权。
 - 桥接修正单 [AUTO-CONNECT-001 r2](tasks/AUTO-CONNECT-001-r2.md) 已发布。当前等待器还不能按签名执行任务。
+- [AUTHORIZATION-001](automation/AUTHORIZATION-001.md) 状态是 `issued-awaiting-local-ack`。blob SHA-1 `81797c5cd5696a1cb21001acaf0d3a749323d029`。云端没有配置本机信任，也没有运行 smoke。
 
 ## IOS-002 v1/r1 授权边界
 
