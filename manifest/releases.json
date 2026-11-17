@@ -1,17 +1,27 @@
 {
   "schema": "ioswb-release-manifest/1",
   "protocol_version": 1,
-  "generated_at": "2026-11-17T14:20:00+08:00",
+  "generated_at": "2026-11-17T16:05:00+08:00",
   "tasks": [
     {
       "task_id": "SMOKE-001",
       "revision": 1,
-      "status": "published",
+      "status": "withdrawn",
       "task_path": "tasks/IOS-AUTO-SMOKE-001.md",
       "task_commit": "8e9bcfb98526ba17ab6b6e7eca6d88c9072e930e",
       "content_sha256": "aba337481a3912205b3fe826bd05c615b694db1db5ca50f06c6937b3004813f8",
       "scopes": ["offline-testing"],
       "title": "IOS-AUTO-SMOKE-001 只读短文本"
+    },
+    {
+      "task_id": "SMOKE-001",
+      "revision": 2,
+      "status": "published",
+      "task_path": "tasks/IOS-AUTO-SMOKE-001-r2.md",
+      "task_commit": "664d95e825e141228080e12a193bac90bb38b12a",
+      "content_sha256": "a891b81c341e610f7c5154ef15b024ba8d2cb816f0d6b474ed08b25f7874cf44",
+      "scopes": ["offline-testing"],
+      "title": "IOS-AUTO-SMOKE-001 只读短文本 r2"
     }
   ]
 }

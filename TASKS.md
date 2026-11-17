@@ -13,9 +13,10 @@
 | IOS-002 | v1 / r1 | 已复跑：不能 live | 自动交接框架的最小协议对齐 | [tasks/IOS-002.md](tasks/IOS-002.md) | [results/IOS-002/r1/a1.md](results/IOS-002/r1/a1.md)（`6c9888abae9b970d2b4af8a3e0d95fd4e53421e1`，原文不改） | [reviews/IOS-002-r1-6c9888a.md](reviews/IOS-002-r1-6c9888a.md) |
 | IOS-002 | v1 / r2 | 已验收：信任范围修复成立，不能 live | 收紧清单信任范围 | [tasks/IOS-002-r2.md](tasks/IOS-002-r2.md) | [results/IOS-002/r2/a1.md](results/IOS-002/r2/a1.md)（`9b553fda23a71007ca741a1d4483a59f197f5de0`） | [reviews/IOS-002-r2-9b553fd.md](reviews/IOS-002-r2-9b553fd.md) |
 | AUTO-CONNECT-001 | v1 / r1 | 已验收：等待器只读，不能 live | 一次连接父任务 | [tasks/AUTO-CONNECT-001.md](tasks/AUTO-CONNECT-001.md) | [a1](results/AUTO-CONNECT-001/r1/a1.md)、[a2](results/AUTO-CONNECT-001/r1/a2.md) | [reviews/AUTO-CONNECT-001-r1-9b553fd.md](reviews/AUTO-CONNECT-001-r1-9b553fd.md) |
-| SMOKE-001 | r1 | 已准备，默认不执行 | IOS-AUTO-SMOKE-001 只读短文本 | [tasks/IOS-AUTO-SMOKE-001.md](tasks/IOS-AUTO-SMOKE-001.md) | 未执行 | 未跑 |
+| SMOKE-001 | r1 | 已撤回；失败台账保留，不可再领取 | IOS-AUTO-SMOKE-001 只读短文本 | [tasks/IOS-AUTO-SMOKE-001.md](tasks/IOS-AUTO-SMOKE-001.md) | [a4](results/AUTHORIZATION-001/r1/a4.md) 自述已消费、未进模型 | [a4 评审](reviews/AUTHORIZATION-001-a4-b7a042f.md) |
+| SMOKE-001 | r2 | 已发布；仅现有会话读交接后可跑一次 | IOS-AUTO-SMOKE-001 只读短文本 r2 | [tasks/IOS-AUTO-SMOKE-001-r2.md](tasks/IOS-AUTO-SMOKE-001-r2.md) | 尚未回传 | 未跑 |
 | AUTO-CONNECT-001 | v1 / r2 | 已验收：补测通过；等待器在 dry-run 下不代跑 | 签名门禁与等待器 | [tasks/AUTO-CONNECT-001-r2.md](tasks/AUTO-CONNECT-001-r2.md) | [results/AUTO-CONNECT-001/r2/a1.md](results/AUTO-CONNECT-001/r2/a1.md)（`8d8ba568293bddfd5c73cd36c7c4b65e89554901`） | [reviews/AUTO-CONNECT-001-r2-8d8ba56.md](reviews/AUTO-CONNECT-001-r2-8d8ba56.md) |
-| AUTHORIZATION-001 | v1 | a4 已评审；SMOKE-001 r2 未发布 | 用户许可的受限发布公钥 | [automation/AUTHORIZATION-001.md](automation/AUTHORIZATION-001.md) | [a4](results/AUTHORIZATION-001/r1/a4.md)（`b7a042f`，未覆盖） | [a4 评审](reviews/AUTHORIZATION-001-a4-b7a042f.md) |
+| AUTHORIZATION-001 | v1 | 成功判定已收紧；r2 交接已发布 | 用户许可的受限发布公钥 | [automation/AUTHORIZATION-001.md](automation/AUTHORIZATION-001.md) | [a4](results/AUTHORIZATION-001/r1/a4.md)（`b7a042f`，未覆盖） | [a4 评审](reviews/AUTHORIZATION-001-a4-b7a042f.md) |
 
 IOS-002 r1：blob SHA-1 `0ff8291afd777d7b64ea13c2480e9ccfca65ec70`；`content_sha256` `c709f134d2846fc51cc3dc1c4ce18f8ddb6f8244490a679ed6549cee7fc28ea8`。两个值不相等，不能互相替代。
 
@@ -25,7 +26,9 @@ AUTO-CONNECT-001 r1：blob SHA-1 `445a6ef779d2758a0d356f92b3fddd85ad17271a`；`c
 
 一次连接说明 [automation/CONNECT_ONCE.md](automation/CONNECT_ONCE.md)：blob SHA-1 `283edb054417adcbc6d08de56ca95429c5a65cd5`；`content_sha256` `e62834c5951193dc5a5b1d6cd8765a5598631051c292704327859100cfe1925e`。
 
-IOS-AUTO-SMOKE-001：blob SHA-1 `1be33135fd636216739f191e3c7cdac39f87c804`；`content_sha256` `aba337481a3912205b3fe826bd05c615b694db1db5ca50f06c6937b3004813f8`。清单 task_id 是 `SMOKE-001`。任务提交 `8e9bcfb98526ba17ab6b6e7eca6d88c9072e930e`。
+IOS-AUTO-SMOKE-001 r1：blob SHA-1 `1be33135fd636216739f191e3c7cdac39f87c804`；`content_sha256` `aba337481a3912205b3fe826bd05c615b694db1db5ca50f06c6937b3004813f8`。任务提交 `8e9bcfb98526ba17ab6b6e7eca6d88c9072e930e`。清单状态现为 `withdrawn`，文件字节未改。
+
+SMOKE-001 r2：blob SHA-1 `856fa45a0308192ced393f5320e9d9258a8f306d`；`content_sha256` `a891b81c341e610f7c5154ef15b024ba8d2cb816f0d6b474ed08b25f7874cf44`。任务提交 `664d95e825e141228080e12a193bac90bb38b12a`。修复提交 `abd57261a0ef6701294e13b69378fa8a49b9f0fd`。一次交接：[automation/SMOKE-001-r2-RUN-ONCE.md](automation/SMOKE-001-r2-RUN-ONCE.md)。
 
 清单文件提交 `216465021b5468e954a61eb8f4b75de5c01c3fe1`。外带锚只有这一条，而且本行不是用户已经确认：
 
@@ -45,7 +48,7 @@ IOS-AUTO-SMOKE-001：blob SHA-1 `1be33135fd636216739f191e3c7cdac39f87c804`；`co
 - [IOS-AUTO-SMOKE-001](tasks/IOS-AUTO-SMOKE-001.md) 已准备。默认 dry-run、信任未配时不执行。本索引不是用户的外带确认。
 - live 仍不启用。签名证据见 [reviews/SIGNATURE-77998e8.md](reviews/SIGNATURE-77998e8.md)。本索引不是用户的外带确认。手机操作仍未授权。
 - 桥接补测已由 01 确认。a3 自述 smoke 未启动、无 claim，仍是 `dry-run`。云端未核对本机磁盘。
-- a4 已收到（`b7a042f`）。自述 r1 已消费但未进入模型。`--patch` 顺序修复与官方启动器边界一致，但成功判定仍把任意 `final.text` 当成完成。**SMOKE-001 r2 未发布。** 见 [reviews/AUTHORIZATION-001-a4-b7a042f.md](reviews/AUTHORIZATION-001-a4-b7a042f.md)。
+- a4 自述 r1 已消费但未进入模型，该评审保留。成功判定已在 `abd57261` 收紧。r2 只通过 [automation/SMOKE-001-r2-RUN-ONCE.md](automation/SMOKE-001-r2-RUN-ONCE.md) 交给现有会话读一次。等待器不会自动开跑。云端不消费 r2。
 
 ## IOS-002 v1/r1 授权边界
 
