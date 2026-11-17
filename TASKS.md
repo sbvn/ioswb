@@ -12,10 +12,15 @@
 | BOOTSTRAP | 回执 v1.0 | 限定验收：mock 成果可进入下一阶段 | 离线框架回执（兼容例外，不要求重做） | [automation/BOOTSTRAP.md](automation/BOOTSTRAP.md)（`d6a0c8cc88ec52caf02543e41095ed30e3180f86`） | 该文件即回执 | [reviews/BOOTSTRAP.md](reviews/BOOTSTRAP.md) |
 | IOS-002 | v1 / r1 | 已复跑：不能 live | 自动交接框架的最小协议对齐 | [tasks/IOS-002.md](tasks/IOS-002.md) | [results/IOS-002/r1/a1.md](results/IOS-002/r1/a1.md)（`6c9888abae9b970d2b4af8a3e0d95fd4e53421e1`，原文不改） | [reviews/IOS-002-r1-6c9888a.md](reviews/IOS-002-r1-6c9888a.md) |
 | IOS-002 | v1 / r2 | 已发布 | 收紧清单信任范围 | [tasks/IOS-002-r2.md](tasks/IOS-002-r2.md) | 待现有会话写入 `results/IOS-002/r2/a1.md` | 未验收 |
+| AUTO-CONNECT-001 | v1 / r1 | 已发布 | 一次连接父任务 | [tasks/AUTO-CONNECT-001.md](tasks/AUTO-CONNECT-001.md) | 阶段回执 `results/AUTO-CONNECT-001/r1/a<n>.md` | 未验收 |
 
 IOS-002 r1：blob SHA-1 `0ff8291afd777d7b64ea13c2480e9ccfca65ec70`；`content_sha256` `c709f134d2846fc51cc3dc1c4ce18f8ddb6f8244490a679ed6549cee7fc28ea8`。两个值不相等，不能互相替代。
 
 IOS-002 r2：blob SHA-1 `9445ac7bb73ec4cb0209b0d55aee36793848bf1e`；`content_sha256` `e01f01a3bb4ac7751702bd46f10033676b769b981341d8f886c22d1ec57f6b47`。同 revision 内容若不再等于对应摘要，必须阻断。
+
+AUTO-CONNECT-001 r1：blob SHA-1 `445a6ef779d2758a0d356f92b3fddd85ad17271a`；`content_sha256` `946310739b9a8be28b416428c1bf0784ff17552e842abd8b5bc9bbd346ebf779`。
+
+一次连接说明 [automation/CONNECT_ONCE.md](automation/CONNECT_ONCE.md)：blob SHA-1 `283edb054417adcbc6d08de56ca95429c5a65cd5`；`content_sha256` `e62834c5951193dc5a5b1d6cd8765a5598631051c292704327859100cfe1925e`。
 
 协议：[docs/AUTOMATION_PROTOCOL.md](docs/AUTOMATION_PROTOCOL.md)。唯一读取 ref 是 `cursor/init-collab-docs-2e45`。
 
@@ -24,8 +29,9 @@ IOS-002 r2：blob SHA-1 `9445ac7bb73ec4cb0209b0d55aee36793848bf1e`；`content_sh
 - IOS-001 保持已验收，不重开。
 - bootstrap 回执已受理。不要重做。
 - IOS-002 r1 回执已在。离线套件复跑见验收。不能 live。不要重做 bootstrap，不要覆盖 `a1`。
-- IOS-002 r2 已发布。现有会话读 `tasks/IOS-002-r2.md` 一次。这不是自动领取成功。
-- `manifest/releases.json` 仍未发布。schema 已提取，但没有「待外带确认」状态，而且单个 task commit 的信任钉会放行整份清单。
+- 一次连接父任务 [AUTO-CONNECT-001](tasks/AUTO-CONNECT-001.md) 已发布。用户只把 [automation/CONNECT_ONCE.md](automation/CONNECT_ONCE.md) 交给现有会话一次。不要再逐单复制。
+- IOS-002 r2 仍是父任务里当前唯一允许执行的子任务。已完成或已在跑就不要第二份。r2 原文没有改。
+- `manifest/releases.json` 仍未发布。r2 的信任范围漏洞未修，schema 也没有「待外带确认」状态。不发布可执行清单。
 - live 与生产信任锚仍 blocked。手机操作仍未授权。
 
 ## IOS-002 v1/r1 授权边界
