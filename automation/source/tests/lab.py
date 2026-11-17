@@ -248,6 +248,11 @@ class Lab:
         env["PYTHONIOENCODING"] = "utf-8"
         env["PYTHON"] = sys.executable
         env.pop("IOSWB_FAULT_INJECT_PHASE", None)
+        # 干净 HOME 下也要能提交：worker 的 git 提交需要身份（审核复跑发现的问题）
+        env.setdefault("GIT_AUTHOR_NAME", "ioswb-automation")
+        env.setdefault("GIT_COMMITTER_NAME", "ioswb-automation")
+        env.setdefault("GIT_AUTHOR_EMAIL", "automation@example.invalid")
+        env.setdefault("GIT_COMMITTER_EMAIL", "automation@example.invalid")
         if extra_env:
             env.update(extra_env)
         return env

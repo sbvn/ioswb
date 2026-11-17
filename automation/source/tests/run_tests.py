@@ -40,9 +40,17 @@ CLEAN_RECEIPT = """# MOCK 回执
 TESTS: list = []
 
 
+class Skip(Exception):
+    """布局不满足前置条件时跳过（例如在快照副本里跑业务文件哈希用例）。"""
+
+
 def test(fn):
     TESTS.append(fn)
     return fn
+
+
+def skip(message: str) -> None:
+    raise Skip(message)
 
 
 def check(condition, message: str) -> None:
@@ -195,8 +203,9 @@ def test_stop_during_execution_cancels_and_confirms_exit():
     lab = prepare("stop_during", mock={"sleep_ms": 20000, "receipt": CLEAN_RECEIPT})
     worker = lab.start_worker("--once")
     try:
-        check(wait_for(lambda: len(lab.events("child_started")) >= 1, timeout=45),
-              "子进程应在超时内启动")
+        # 等 mock harness 自己写下 start，避免“子进程刚 spawn 就被杀”造成计数歧义
+        check(wait_for(lambda: lab.exec_starts() >= 1, timeout=45),
+              "mock harness 应在超时内进入执行")
         lab.stop("during execution")
         proc_out, _ = worker.communicate(timeout=60)
     finally:
@@ -256,7 +265,7 @@ def test_second_worker_cannot_take_lock():
     lab = prepare("lock", mock={"sleep_ms": 20000, "receipt": CLEAN_RECEIPT})
     first = lab.start_worker("--once")
     try:
-        check(wait_for(lambda: len(lab.events("child_started")) >= 1, timeout=45), "第一个 worker 应启动")
+        check(wait_for(lambda: lab.exec_starts() >= 1, timeout=45), "第一个 worker 应进入执行")
         second = lab.run_worker("--once")
         check(second.returncode == 3, "第二个 worker 应退出 3，实际 %s\n%s"
               % (second.returncode, second.stdout))
@@ -330,13 +339,18 @@ def test_control_status_reports_state():
 
 @test
 def test_business_files_untouched():
-    """执行器不得删除或改写业务目录下的既有脚本。"""
+    """执行器不得删除或改写业务目录下的既有脚本。
+
+    在只含 automation 快照的副本里跑时，父目录不是业务树 —— 这时跳过，
+    不把「布局不同」当成通过，也不当成失败。
+    """
     from lab import AUTOMATION_ROOT
 
     business = AUTOMATION_ROOT.parent
-    for name in ("weibo_browse.py", "weibo_browse_agent.js", "weibo_touch_agent.js",
-                 "weibo_batch.py", "weibo_stability_probe.py", "weibo_min_agent.js",
-                 "README.md", "AGENTS.md"):
+    missing = [n for n in PROTECTED_BUSINESS_FILES if not (business / n).exists()]
+    if missing:
+        skip("当前布局不是业务树，缺少 %d 个业务文件：%s" % (len(missing), ", ".join(missing[:3])))
+    for name in PROTECTED_BUSINESS_FILES:
         check((business / name).exists(), "业务文件缺失: %s" % name)
 
 
@@ -359,6 +373,9 @@ def test_protected_business_files_hash_unchanged():
     from lab import AUTOMATION_ROOT
 
     business = AUTOMATION_ROOT.parent
+    missing = [name for name in PROTECTED_BUSINESS_FILES if not (business / name).exists()]
+    if missing:
+        skip("当前布局不是业务树，缺少 %d 个业务文件" % len(missing))
     before = {name: _sha(business / name) for name in PROTECTED_BUSINESS_FILES}
     sizes = {name: (business / name).stat().st_size for name in PROTECTED_BUSINESS_FILES}
     lab = prepare("hash_guard", mock={"sleep_ms": 50, "receipt": CLEAN_RECEIPT})
@@ -472,7 +489,7 @@ def test_stop_across_restart_three_points():
     lab2 = prepare("stop_restart_during", mock={"sleep_ms": 20000, "receipt": CLEAN_RECEIPT})
     worker = lab2.start_worker("--once")
     try:
-        check(wait_for(lambda: len(lab2.events("child_started")) >= 1, timeout=45), "子进程应启动")
+        check(wait_for(lambda: lab2.exec_starts() >= 1, timeout=45), "mock harness 应进入执行")
         lab2.stop("during execution")
         worker.communicate(timeout=60)
     finally:
@@ -579,6 +596,86 @@ def test_ledger_six_protocol_states():
     check("claim" in events and "attempt_start" in events, "台账应包含 accepted/​running 对应事件")
 
 
+@test
+def test_pinned_task_commit_only_authorizes_that_task():
+    """r2 缺陷回归：只钉一个任务的 commit，不得放行同一清单里的其他任务。"""
+    lab = Lab("trust_per_task")
+    task_a = lab.plan_task("MOCK-101", mock={"sleep_ms": 50, "receipt": CLEAN_RECEIPT})
+    task_b = lab.plan_task("MOCK-102", mock={"sleep_ms": 50, "receipt": CLEAN_RECEIPT})
+    lab.publish()
+    check(task_a["task_commit"] != task_b["task_commit"], "两个任务应各自有独立 commit")
+
+    # 只钉 A 的 task_commit；清单摘要与清单 commit 都不钉
+    lab.write_trust(commits=[task_a["task_commit"]])
+    lab.write_config(mode="mock")
+    proc = lab.run_worker("--once")
+    check(proc.returncode == 0, "只钉一个任务时应平稳运行\n%s" % proc.stdout)
+    check(lab.exec_starts() == 1, "只应执行被钉住的那一个任务，实际 %d" % lab.exec_starts())
+    claimed = [e.get("attempt") for e in lab.events("claim")]
+    check(claimed == ["MOCK-101@r1"], "只应领取 MOCK-101，实际 %s" % claimed)
+    not_trusted = [e.get("attempt") for e in lab.events("task_not_trusted")]
+    check("MOCK-102@r1" in not_trusted, "MOCK-102 应被记为 task_not_trusted")
+    check(not lab.remote_has("results/MOCK-102/r1/a1.md"), "MOCK-102 不得产出回执")
+
+    # 改钉 B：B 执行，A 已领取过不得重跑
+    lab.write_trust(commits=[task_b["task_commit"]])
+    proc2 = lab.run_worker("--once")
+    check(proc2.returncode == 0, "改钉 B 后应平稳运行\n%s" % proc2.stdout)
+    check(lab.exec_starts() == 2, "B 应执行且 A 不重跑，实际执行 %d" % lab.exec_starts())
+    claimed2 = [e.get("attempt") for e in lab.events("claim")]
+    check(claimed2 == ["MOCK-101@r1", "MOCK-102@r1"], "领取顺序/数量不符: %s" % claimed2)
+    check(lab.remote_has("results/MOCK-102/r1/a1.md"), "B 应产出回执")
+
+
+@test
+def test_trust_api_separates_manifest_and_task_scope():
+    """结构 + 行为双证据：清单级签名/摘要是整份清单，任务级钉只作用于单任务。"""
+    import inspect
+
+    from executor import trust as trust_mod
+
+    manifest_params = inspect.signature(trust_mod.evaluate_manifest).parameters
+    check("manifest_commit" in manifest_params, "清单级判定应接收 manifest_commit")
+    check("task_commit" not in manifest_params,
+          "清单级判定不得接收 task_commit（这正是 r1 缺陷的入口）")
+    task_params = inspect.signature(trust_mod.evaluate_task).parameters
+    check("manifest_decision" in task_params and "task_commit" in task_params,
+          "任务级判定应同时接收 manifest_decision 与 task_commit")
+
+    pinned_a = "a" * 40
+    pinned_b = "d" * 40
+    cfg = trust_mod.TrustConfig(path="<test>", rules={
+        "pinned_manifest_sha256": [],
+        "pinned_commit": [pinned_a],
+        "signed_commit_fingerprints": [],
+    })
+    # 清单摘要/提交都不匹配，也没有清单级签名
+    manifest_decision = trust_mod.evaluate_manifest(
+        cfg, manifest_sha256="b" * 64, manifest_commit="c" * 40,
+        manifest_signature={"status": "unsigned", "fingerprint": None},
+    )
+    check(manifest_decision.trusted is False, "清单级不应因任务钉而可信")
+    decision_a = trust_mod.evaluate_task(cfg, task_commit=pinned_a,
+                                         manifest_decision=manifest_decision)
+    check(decision_a.trusted is True and decision_a.scope == "task",
+          "被钉住的任务应放行且 scope=task")
+    decision_b = trust_mod.evaluate_task(cfg, task_commit=pinned_b,
+                                         manifest_decision=manifest_decision)
+    check(decision_b.trusted is False, "未钉住的任务不得放行")
+    # 清单级可信时整份清单放行
+    bound = trust_mod.TrustConfig(path="<test>", rules={
+        "pinned_manifest_sha256": ["%s:%s" % ("b" * 64, "c" * 40)],
+        "pinned_commit": [],
+        "signed_commit_fingerprints": [],
+    })
+    ok_manifest = trust_mod.evaluate_manifest(
+        bound, manifest_sha256="b" * 64, manifest_commit="c" * 40, manifest_signature=None)
+    check(ok_manifest.trusted and ok_manifest.scope == "manifest", "绑定摘要钉应放行整份清单")
+    check(trust_mod.evaluate_task(bound, task_commit=pinned_b,
+                                  manifest_decision=ok_manifest).trusted is True,
+          "清单级信任时任务级应放行")
+
+
 # ---------------------------------------------------------------- 运行器
 
 def main(argv: list[str]) -> int:
@@ -588,19 +685,25 @@ def main(argv: list[str]) -> int:
     print("IOSWB automation 离线测试：%d 个用例" % len(selected))
     print("=" * 72)
     failures = []
+    skipped = []
     started = time.time()
     for fn in selected:
         begin = time.time()
         try:
             fn()
             print("PASS  %-52s %5.1fs" % (fn.__name__, time.time() - begin))
+        except Skip as exc:
+            skipped.append((fn.__name__, str(exc)))
+            print("SKIP  %-52s %5.1fs  %s" % (fn.__name__, time.time() - begin, exc))
         except Exception as exc:  # noqa: BLE001
             failures.append((fn.__name__, exc))
             print("FAIL  %-52s %5.1fs" % (fn.__name__, time.time() - begin))
             print("      %s" % str(exc).replace("\n", "\n      ")[:1200])
             traceback.print_exc()
     print("-" * 72)
-    print("通过 %d / %d，用时 %.1fs" % (len(selected) - len(failures), len(selected), time.time() - started))
+    print("通过 %d / %d，跳过 %d，用时 %.1fs"
+          % (len(selected) - len(failures) - len(skipped), len(selected), len(skipped),
+             time.time() - started))
     if failures:
         print("失败用例：")
         for name, exc in failures:

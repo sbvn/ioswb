@@ -49,7 +49,7 @@ from .locking import ProcessLock
 from .manifest import TaskEntry, parse_manifest, verify_task_binding
 from .redact import scan as scan_receipt
 from .runner import HeadlessRunner, MockRunner, probe_product
-from .trust import evaluate as evaluate_trust
+from .trust import evaluate_manifest, evaluate_task
 from .trust import load_trust
 
 # 落盘后可以安全补传的状态（崩溃在这里不需要 recovery_required）。
@@ -178,34 +178,56 @@ class Worker:
             self.out("[协议] 清单不可用：%s" % str(exc)[:200])
             return "wait"
 
-        # 6) 信任核验
-        # 摘要钉必须绑定到「携带该清单内容的那个 commit」，而不是当前 HEAD：
-        # 否则任何后续提交（包括我们自己的回执提交）都会让绑定失效。
+        # 6) 信任核验（r2：清单级与任务级分开判定）
+        # 清单级：摘要钉 / 清单提交钉 / 清单提交的签名。
         manifest_commit = self.repo.file_commit(head, cfg.manifest_path) or head
         trust_cfg = load_trust(cfg.trust_file)
         published = manifest.published()
-        signature = None
-        if published:
-            signature = self.repo.verify_signature(published[0].task_commit)
-        decision = evaluate_trust(
+        manifest_signature = self.repo.verify_signature(manifest_commit) if manifest_commit else None
+        manifest_decision = evaluate_manifest(
             trust_cfg,
             manifest_sha256=manifest.raw_sha256,
             manifest_commit=manifest_commit,
-            task_commit=published[0].task_commit if published else "",
-            signature=signature,
+            manifest_signature=manifest_signature,
         )
-        if not decision.trusted:
+        # 任务级：清单级不成立时，只放行被单独钉住 task_commit 的那一个任务。
+        decisions = {
+            entry.key: evaluate_task(trust_cfg, task_commit=entry.task_commit,
+                                     manifest_decision=manifest_decision)
+            for entry in published
+        }
+        trusted_any = any(d.trusted for d in decisions.values())
+        if not trusted_any:
             self._record_once("refused_untrusted", "trust:" + manifest.raw_sha256[:12],
-                              reasons=decision.reasons, manifest_sha256=manifest.raw_sha256)
-            self.out("[信任] 拒绝：%s" % decision.summary())
+                              reasons=manifest_decision.reasons,
+                              manifest_sha256=manifest.raw_sha256,
+                              manifest_commit=manifest_commit)
+            self.out("[信任] 拒绝：%s" % manifest_decision.summary())
             if self.mode != "dry-run":
                 return "wait"
         else:
-            self.ledger.append("trust_ok", rule=decision.rule, manifest_sha256=manifest.raw_sha256)
+            self.ledger.append("trust_ok", rule=manifest_decision.rule,
+                               scope=manifest_decision.scope,
+                               manifest_sha256=manifest.raw_sha256,
+                               trusted_tasks=sorted(k for k, d in decisions.items() if d.trusted))
 
-        # 7) 选一个任务
+        # 7) 记录本周期内未获授权的任务（每个任务一条，去重；不静默跳过）
+        for entry in published:
+            key = attempt_key(entry.task_id, entry.revision)
+            if decisions[key].trusted:
+                continue
+            if self.ledger.has_event_any(key, ("task_not_trusted",)):
+                continue
+            self.ledger.append("task_not_trusted", attempt=key, task_id=entry.task_id,
+                               revision=entry.revision, task_commit=entry.task_commit,
+                               reasons=decisions[key].reasons,
+                               note="未单独钉住该 task_commit，且清单级信任不成立")
+            self.out("[信任] %s 未获授权（不放行同一清单里的其他任务）。" % key)
+
+        # 8) 选一个任务
         for entry in sorted(published, key=lambda t: (t.task_id, t.revision)):
             key = attempt_key(entry.task_id, entry.revision)
+            decision = decisions[key]
             recorded = self.ledger.digest_of(key)
             if recorded and recorded != entry.content_sha256:
                 self.ledger.append("content_changed", attempt=key,
@@ -218,6 +240,8 @@ class Worker:
             if self.ledger.has_event_any(key, ("attempt_refused_scope", "attempt_refused_integrity")):
                 continue
             if self.ledger.is_closed(key):
+                continue
+            if not decision.trusted:
                 continue
 
             ok, reason, task_bytes = verify_task_binding(entry, self.repo, head)
@@ -237,13 +261,15 @@ class Worker:
                 self.out("[范围] %s 拒绝：%s" % (key, exc))
                 continue
 
-            if self.mode == "dry-run" or not decision.trusted:
+            if self.mode == "dry-run":
                 self.ledger.append("dry_run_plan", attempt=key, task_id=entry.task_id,
                                    revision=entry.revision, digest=entry.content_sha256,
-                                   scopes=list(entry.scopes), trusted=decision.trusted,
+                                   scopes=list(entry.scopes), trusted=True,
+                                   trust_rule=decision.rule, trust_scope=decision.scope,
                                    next_step="would_claim_and_execute")
-                self.out("[dry-run] 将领取 %s（摘要 %s，范围 %s），不执行。"
-                         % (key, entry.content_sha256[:12], ",".join(entry.scopes)))
+                self.out("[dry-run] 将领取 %s（摘要 %s，范围 %s，信任 %s/%s），不执行。"
+                         % (key, entry.content_sha256[:12], ",".join(entry.scopes),
+                            decision.rule, decision.scope))
                 return "wait"
 
             return self._execute(entry, task_bytes, decision)
@@ -301,6 +327,7 @@ class Worker:
         self.ledger.append("claim", attempt=key, task_id=entry.task_id,
                            revision=entry.revision, digest=entry.content_sha256,
                            scopes=list(entry.scopes), trust_rule=decision.rule,
+                           trust_scope=decision.scope,
                            mode=self.mode, context=context_meta)
         store.save(revision=entry.revision, attempt=attempt, phase="accepted",
                    digest=entry.content_sha256, summary="已领取，尚未开始执行",
@@ -535,10 +562,16 @@ class Worker:
 
     # ------------------------------------------------------------ 恢复
 
+    # 只有这些事件代表「尝试已经开始但尚未收敛」；其他事件（如 task_not_trusted）不参与恢复判定。
+    IN_FLIGHT_EVENTS = ("claim", "attempt_start", "attempt_phase", "child_started",
+                        "attempt_harness_exit")
+
     def _sweep_decision(self, key: str, slot: dict) -> str | None:
-        """判断未收敛尝试的归属：abort（未执行）/ recovery（结果不明）/ None（交给补传）。"""
+        """判断未收敛尝试的归属：abort（未执行）/ recovery（结果不明）/ None（交给补传或无需处理）。"""
         last = slot["last"]
         if last in TERMINAL or last in NEEDS_REVIEW or last in RESUMABLE_UPLOAD:
+            return None
+        if last not in self.IN_FLIGHT_EVENTS:
             return None
         phase = None
         for record in reversed(self.ledger.records):

@@ -49,10 +49,12 @@ class TrustDecision:
     trusted: bool
     rule: str | None
     reasons: list[str]
+    scope: str = "none"          # "manifest"（对整份清单生效）| "task"（只对单个任务生效）| "none"
+    task_commit: str | None = None
 
     def summary(self) -> str:
         if self.trusted:
-            return "trusted by %s" % self.rule
+            return "trusted by %s（scope=%s）" % (self.rule, self.scope)
         return "untrusted: %s" % "; ".join(self.reasons)
 
 
@@ -94,28 +96,31 @@ def load_trust(path) -> TrustConfig:
     return TrustConfig(path=str(p), rules=rules, raw=payload)
 
 
-def evaluate(
+def evaluate_manifest(
     trust: TrustConfig,
     *,
     manifest_sha256: str,
     manifest_commit: str | None,
-    task_commit: str,
-    signature: dict | None,
+    manifest_signature: dict | None,
 ) -> TrustDecision:
+    """只看清单本身的信任：摘要钉、清单提交钉、清单提交的签名。
+
+    这里**不接受任务 commit**。任务的签名也不能替清单授权 —— 这是 r2 修的缺陷：
+    以前调用方把 published[0].task_commit 传进来，钉住任一任务就放行了整份清单。
+    """
     if not trust.configured:
         return TrustDecision(False, None, ["本地信任规则未配置（allow 为空）：真实自动执行被禁止"])
 
     manifest_sha256 = (manifest_sha256 or "").lower()
     manifest_commit = (manifest_commit or "").lower()
-    task_commit = (task_commit or "").lower()
 
     pinned_manifests = trust.rules.get("pinned_manifest_sha256") or []
     pinned_commits = trust.rules.get("pinned_commit") or []
 
     # 协议要求（docs/AUTOMATION_PROTOCOL.md「信任」）：摘要钉必须绑定到具体 commit，
-    # 不能只因为正文摘要相同就放行。支持两种写法：
-    #   "<sha256>"            裸摘要，仅当清单提交也在 pinned_commit 中才成立
-    #   "<sha256>:<commit>"   摘要 + 提交绑定，两者必须同时命中
+    # 不能只因为正文摘要相同就放行。两种写法：
+    #   "<sha256>:<commit>"  摘要 + 提交绑定，两者必须同时命中
+    #   "<sha256>"           裸摘要，仅当清单提交也在 pinned_commit 中才成立
     unbound_reason = ""
     for entry in pinned_manifests:
         digest, _, bound_commit = entry.partition(":")
@@ -123,28 +128,60 @@ def evaluate(
             continue
         if bound_commit:
             if manifest_commit and bound_commit == manifest_commit:
-                return TrustDecision(True, "pinned_manifest_sha256:bound", [])
+                return TrustDecision(True, "pinned_manifest_sha256:bound", [], scope="manifest")
             unbound_reason = "摘要命中但绑定提交不匹配（钉 %s / 实际 %s）" % (
                 bound_commit[:12], (manifest_commit or "未知")[:12])
         elif manifest_commit and manifest_commit in pinned_commits:
-            return TrustDecision(True, "pinned_manifest_sha256+commit", [])
+            return TrustDecision(True, "pinned_manifest_sha256+commit", [], scope="manifest")
         else:
             unbound_reason = "摘要命中但未绑定到具体 commit（需同时钉 pinned_commit 或用 <sha256>:<commit>）"
 
-    for candidate in (manifest_commit, task_commit):
-        if candidate and candidate in pinned_commits:
-            return TrustDecision(True, "pinned_commit", [])
+    if manifest_commit and manifest_commit in pinned_commits:
+        return TrustDecision(True, "pinned_commit:manifest", [], scope="manifest")
 
-    fingerprints = [f.replace(" ", "").lower() for f in (trust.rules.get("signed_commit_fingerprints") or [])]
-    if fingerprints and signature:
-        status = signature.get("status")
-        fp = (signature.get("fingerprint") or "").replace(" ", "").lower()
+    fingerprints = [f.replace(" ", "").lower()
+                    for f in (trust.rules.get("signed_commit_fingerprints") or [])]
+    if fingerprints and manifest_signature:
+        status = manifest_signature.get("status")
+        fp = (manifest_signature.get("fingerprint") or "").replace(" ", "").lower()
         if status == "good" and fp and fp in fingerprints:
-            return TrustDecision(True, "signed_commit_fingerprints", [])
+            return TrustDecision(True, "signed_manifest_commit", [], scope="manifest")
 
-    reasons = ["清单摘要、提交 SHA、提交签名均不匹配本机信任规则"]
+    reasons = ["清单摘要、清单提交 SHA、清单提交签名均不匹配本机信任规则"]
     if unbound_reason:
         reasons.insert(0, unbound_reason)
-    if signature is not None:
-        reasons.append("签名状态=%s" % signature.get("status"))
+    if manifest_signature is not None:
+        reasons.append("清单提交签名状态=%s" % manifest_signature.get("status"))
     return TrustDecision(False, None, reasons)
+
+
+def evaluate_task(
+    trust: TrustConfig,
+    *,
+    task_commit: str,
+    manifest_decision: TrustDecision,
+) -> TrustDecision:
+    """单个任务是否可执行。
+
+    - 清单级已信任（摘要钉/清单提交钉/清单签名）→ 该清单内所有任务放行。
+    - 否则只认「钉住的任务 commit」：只放行 task_commit 等于该钉的那一个任务。
+    - 任务 commit 的签名不参与授权（签名只核清单提交）。
+    """
+    if manifest_decision.trusted:
+        return TrustDecision(True, manifest_decision.rule, [], scope="manifest")
+
+    commit = (task_commit or "").lower()
+    pinned_commits = trust.rules.get("pinned_commit") or []
+    if commit and commit in pinned_commits:
+        return TrustDecision(True, "pinned_commit:task", [], scope="task", task_commit=commit)
+
+    return TrustDecision(
+        False, None,
+        ["任务 commit 未被本机信任规则单独钉住，且清单级信任不成立"],
+        scope="none", task_commit=commit or None,
+    )
+
+
+# 兼容旧调用名：只保留清单级语义，不再接受 task_commit。
+def evaluate(trust: TrustConfig, **_kwargs) -> TrustDecision:
+    raise TrustError("evaluate() 只做清单级判断，请改用 evaluate_manifest()/evaluate_task()")
