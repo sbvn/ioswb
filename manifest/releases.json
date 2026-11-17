@@ -1,7 +1,7 @@
 {
   "schema": "ioswb-release-manifest/1",
   "protocol_version": 1,
-  "generated_at": "2026-11-17T17:02:13+08:00",
+  "generated_at": "2026-11-17T17:12:36+08:00",
   "tasks": [
     {
       "task_id": "SMOKE-001",
@@ -42,6 +42,16 @@
       "content_sha256": "aeda100ab2f7c56324531cd9683d705814bc54012182fd99438fa1512d302138",
       "scopes": ["offline-testing"],
       "title": "IOS-AUTO-SMOKE-002 只读短文本（无人值守）r2"
+    },
+    {
+      "task_id": "IOS-004",
+      "revision": 1,
+      "status": "published",
+      "task_path": "tasks/IOS-004.md",
+      "task_commit": "9ee4602d601b6039506d8ab89b6eb2e4cdb9854e",
+      "content_sha256": "f4feb8bf71f925a770d5e9f9c935be88ca63a2637028bdd6e675a56df5531a5e",
+      "scopes": ["framework-development", "offline-testing"],
+      "title": "执行器手机自动档门禁（phone_auto）"
     }
   ]
 }
