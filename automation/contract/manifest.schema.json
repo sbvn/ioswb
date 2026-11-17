@@ -1,0 +1,81 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/sbvn/ioswb/automation/contract/manifest.schema.json",
+  "title": "ioswb release manifest",
+  "description": "从本机 automation/executor/manifest.py 的 parse_manifest() 只读提取。字段以解析器实际接受的结构为准；automation/README.md 的示例字段相同，但未写到这些约束（详见 automation/contract/README.md 的对照表）。本文件不是已发布清单，worker 不会读取它。",
+  "type": "object",
+  "additionalProperties": true,
+  "required": ["schema", "protocol_version", "tasks"],
+  "properties": {
+    "schema": {
+      "const": "ioswb-release-manifest/1",
+      "description": "manifest.py: SCHEMA_MANIFEST。不符即 ManifestError。"
+    },
+    "protocol_version": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "manifest.py: 必须 >= 1 的整数。"
+    },
+    "generated_at": {
+      "type": "string",
+      "description": "可选；解析器只当作字符串保存，不校验格式。"
+    },
+    "tasks": {
+      "type": "array",
+      "description": "任务数组；解析器要求是数组。",
+      "items": { "$ref": "#/$defs/task" }
+    }
+  },
+  "$defs": {
+    "task": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": ["task_id", "revision", "status", "task_path", "task_commit", "content_sha256", "scopes"],
+      "properties": {
+        "task_id": {
+          "type": "string",
+          "pattern": "^[A-Z][A-Z0-9]{1,11}-\\d{3}$",
+          "description": "manifest.py: TASK_ID_RE。例：IOS-002、MOCK-900。"
+        },
+        "revision": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "manifest.py: 必须是 >= 1 的整数。"
+        },
+        "status": {
+          "enum": ["published", "withdrawn", "draft"],
+          "description": "manifest.py: STATUSES。只有 published 会被领取。"
+        },
+        "task_path": {
+          "type": "string",
+          "pattern": "^[^/].*\\.md$",
+          "description": "manifest.py: safe_relpath + 必须以 .md 结尾；禁止绝对路径与 .. 逃逸。"
+        },
+        "task_commit": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{40}$",
+          "description": "manifest.py: 40 位小写十六进制；worker 会校验它是分支 HEAD 的祖先（merge-base --is-ancestor）。"
+        },
+        "content_sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$",
+          "description": "manifest.py: 64 位小写十六进制，等于 `git show <task_commit>:<task_path>` 的输出字节的 sha256。注意它不是 git blob SHA-1；它是与该 blob 绑定的内容摘要（见 contract/README.md）。"
+        },
+        "scopes": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "type": "string", "minLength": 1 },
+          "description": "manifest.py: 非空字符串数组。worker 的硬闸门：必须落在本机 scope.allowed 内，且不得含 scope.denied_overrides / 内置禁止项。"
+        },
+        "title": {
+          "type": "string",
+          "description": "可选；worker 只用于提交信息。"
+        },
+        "meta": {
+          "type": "object",
+          "description": "可选；worker 只在 mock 模式读取 meta.mock_harness（测试用），live 模式忽略。"
+        }
+      }
+    }
+  }
+}

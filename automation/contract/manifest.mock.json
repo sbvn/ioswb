@@ -1,0 +1,24 @@
+{
+  "_comment": "MOCK-ONLY 样例：仅用于演示 automation/executor/manifest.py 接受的字段结构。不是已发布清单，worker 不读取本文件，不含真实提交、令牌、信任锚或设备信息。",
+  "schema": "ioswb-release-manifest/1",
+  "protocol_version": 1,
+  "generated_at": "2026-11-17T00:00:00+08:00",
+  "tasks": [
+    {
+      "task_id": "MOCK-901",
+      "revision": 1,
+      "status": "published",
+      "task_path": "tasks/MOCK-901.md",
+      "task_commit": "0000000000000000000000000000000000000000",
+      "content_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+      "scopes": ["offline-testing"],
+      "title": "mock 样例任务（不执行）",
+      "meta": {
+        "mock_harness": {
+          "sleep_ms": 10,
+          "receipt": "# MOCK 回执\n\n仅用于离线测试。\n"
+        }
+      }
+    }
+  ]
+}

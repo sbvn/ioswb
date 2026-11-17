@@ -1,0 +1,180 @@
+{
+  "schema": "ioswb-release-manifest/1",
+  "protocol_version": 1,
+  "generated_at": "2026-11-17T19:41:00+08:00",
+  "tasks": [
+    {
+      "task_id": "SMOKE-001",
+      "revision": 1,
+      "status": "withdrawn",
+      "task_path": "tasks/IOS-AUTO-SMOKE-001.md",
+      "task_commit": "8e9bcfb98526ba17ab6b6e7eca6d88c9072e930e",
+      "content_sha256": "aba337481a3912205b3fe826bd05c615b694db1db5ca50f06c6937b3004813f8",
+      "scopes": [
+        "offline-testing"
+      ],
+      "title": "IOS-AUTO-SMOKE-001 只读短文本"
+    },
+    {
+      "task_id": "SMOKE-001",
+      "revision": 2,
+      "status": "published",
+      "task_path": "tasks/IOS-AUTO-SMOKE-001-r2.md",
+      "task_commit": "664d95e825e141228080e12a193bac90bb38b12a",
+      "content_sha256": "a891b81c341e610f7c5154ef15b024ba8d2cb816f0d6b474ed08b25f7874cf44",
+      "scopes": [
+        "offline-testing"
+      ],
+      "title": "IOS-AUTO-SMOKE-001 只读短文本 r2"
+    },
+    {
+      "task_id": "SMOKE-002",
+      "revision": 1,
+      "status": "withdrawn",
+      "task_path": "tasks/IOS-AUTO-SMOKE-002.md",
+      "task_commit": "f50b88226ae2df0addc553e7210f6653624cd1e7",
+      "content_sha256": "994f23df0e4de0594742b496b062f6bce1ccd8dd2d7e3a427abef9338b1ead62",
+      "scopes": [
+        "offline-testing"
+      ],
+      "title": "IOS-AUTO-SMOKE-002 只读短文本（无人值守试跑）"
+    },
+    {
+      "task_id": "SMOKE-002",
+      "revision": 2,
+      "status": "published",
+      "task_path": "tasks/IOS-AUTO-SMOKE-002-r2.md",
+      "task_commit": "bd0ca393fe61a1d74c961a19f8c8938840f079b0",
+      "content_sha256": "aeda100ab2f7c56324531cd9683d705814bc54012182fd99438fa1512d302138",
+      "scopes": [
+        "offline-testing"
+      ],
+      "title": "IOS-AUTO-SMOKE-002 只读短文本（无人值守）r2"
+    },
+    {
+      "task_id": "IOS-004",
+      "revision": 1,
+      "status": "withdrawn",
+      "task_path": "tasks/IOS-004.md",
+      "task_commit": "a643ff9ecb4c43077ed32e859db4114581967891",
+      "content_sha256": "f4feb8bf71f925a770d5e9f9c935be88ca63a2637028bdd6e675a56df5531a5e",
+      "scopes": [
+        "framework-development",
+        "offline-testing"
+      ],
+      "title": "执行器手机自动档门禁（phone_auto）"
+    },
+    {
+      "task_id": "IOS-004",
+      "revision": 2,
+      "status": "withdrawn",
+      "task_path": "tasks/IOS-004-r2.md",
+      "task_commit": "104ebabc64953204380ad25c8e96b7f6b8e8a39f",
+      "content_sha256": "d6406d6c89b6a5f7fc62ac90e0aa00f43bea0411ecbd7697aefb9f46d020dfd4",
+      "scopes": [
+        "framework-development",
+        "offline-testing"
+      ],
+      "title": "执行器手机自动档门禁（phone_auto）"
+    },
+    {
+      "task_id": "IOS-004",
+      "revision": 3,
+      "status": "withdrawn",
+      "task_path": "tasks/IOS-004-r3.md",
+      "task_commit": "399c0857399a94fc8458324d16b12c704409816c",
+      "content_sha256": "eb480e870041c522862fbc67b987a7e4e27ec4599d33ddb6dbedc43f44f8304f",
+      "scopes": [
+        "framework-development",
+        "offline-testing"
+      ],
+      "title": "执行器手机自动档门禁（phone_auto）"
+    },
+    {
+      "task_id": "IOS-004",
+      "revision": 4,
+      "status": "published",
+      "task_path": "tasks/IOS-004-r4.md",
+      "task_commit": "69fa2cee4b81e68f9686c93ed83f0869886f074f",
+      "content_sha256": "3189ef4a67709f6a145bb2f6cf0eb4ed630326d6187538aa9c8142343e6df8c1",
+      "scopes": [
+        "framework-development",
+        "offline-testing"
+      ],
+      "title": "执行器手机自动档门禁（phone_auto）"
+    },
+    {
+      "task_id": "IOS-005",
+      "revision": 1,
+      "status": "withdrawn",
+      "task_path": "tasks/IOS-005.md",
+      "task_commit": "fd88ed475f115e37af4b7ceb2183e4d1aeef03e0",
+      "content_sha256": "1cadb52c23e52d423250ffe39be006332abf9ac8d9c1e2b6f267f209665f11e4",
+      "scopes": [
+        "phone-operation",
+        "device-attach",
+        "real-touch",
+        "spawn"
+      ],
+      "title": "运行现有程序一次：打开微博、首页刷新1次、随机滑动3–5下（手机自动档首跑）"
+    },
+    {
+      "task_id": "IOS-005",
+      "revision": 2,
+      "status": "withdrawn",
+      "task_path": "tasks/IOS-005-r2.md",
+      "task_commit": "9e92e94c2f086a3a71b93a1fd469a7ff1e965227",
+      "content_sha256": "03f16e464e38e86a194e4b16eedaa5a2300af7ceef5e9ec377074b1b517c5e79",
+      "scopes": [
+        "phone-operation",
+        "device-attach",
+        "real-touch",
+        "spawn"
+      ],
+      "title": "运行现有程序一次（冷启动）：打开微博、首页刷新1次、随机滑动3–5下"
+    },
+    {
+      "task_id": "IOS-005",
+      "revision": 3,
+      "status": "published",
+      "task_path": "tasks/IOS-005-r3.md",
+      "task_commit": "7d66b6d14463950759ba0b61562240d95dce8201",
+      "content_sha256": "d6c5db4142dfe9dcf90e7e809e01ec15a05f4f8b7c1f5a990b192c51b044dab2",
+      "scopes": [
+        "phone-operation",
+        "device-attach",
+        "real-touch",
+        "spawn"
+      ],
+      "title": "运行现有程序一次（预杀后冷启动）：打开微博、首页刷新1次、随机滑动3–5下"
+    },
+    {
+      "task_id": "IOS-006",
+      "revision": 1,
+      "status": "completed",
+      "task_path": "tasks/IOS-006.md",
+      "task_commit": "6737b78faca9ae9bef0f361a55683b5f4c121370",
+      "content_sha256": "52b18849990cb14b8af3b22988b9e42ea9e6b811756cf16f1ae28010029c3b61",
+      "scopes": [
+        "phone-operation",
+        "device-attach"
+      ],
+      "title": "只读盘点：AMG 包名、现成工具与一键新机完成判定条件"
+    },
+    {
+      "task_id": "IOS-007",
+      "revision": 1,
+      "status": "withdrawn",
+      "task_path": "tasks/IOS-007.md",
+      "task_commit": "1a6b6d67008d9e975db70aa164c1b6bcf0b44349",
+      "content_sha256": "106bb081930d9a03268348bb16dc62dddc4b9fc3e83484bf6116b75642c1e387",
+      "scopes": [
+        "phone-operation",
+        "device-attach",
+        "real-touch",
+        "spawn"
+      ],
+      "title": "AMG 一键新机 → 微博刷新首页（滑动3–5下）到登录页"
+    }
+  ]
+}
