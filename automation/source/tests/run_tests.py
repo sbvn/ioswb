@@ -909,6 +909,200 @@ def test_headless_ignores_manifest_command_injection():
     check("--patch" not in cmd, "未配置 patch_files 时不得出现 --patch")
 
 
+# ---------------------------------------------------------------- 持续调度
+
+
+def _loop(lab: Lab, *extra: str, timeout: float = 30.0):
+    loop = AUTOMATION_ROOT / "bin" / "dsh_loop.py"
+    cmd = [sys.executable, str(loop), "--config", str(lab.config_path)] + list(extra)
+    return subprocess.run(cmd, capture_output=True, text=True, encoding="utf-8",
+                          errors="replace", env=lab._env(), timeout=timeout)
+
+
+def _write_permits(lab: Lab, grants: list[dict], *, saved_login: bool = False) -> None:
+    path = lab.root / "config" / "permits.json"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps({
+        "schema": "ioswb-local-permit/1",
+        "saved_login": saved_login,
+        "grants": grants,
+    }, ensure_ascii=False, indent=2), encoding="utf-8")
+
+
+@test
+def test_continuous_two_signed_tasks_then_stop():
+    """真实调度进程、文件台账、本地 git。两份签名清单，两任务，然后 STOP。"""
+    from demo_continuous import run_demo
+
+    summary = run_demo()
+    check(summary["ok"], "连续调度未通过：%s\n%s" % (
+        {k: v for k, v in summary.items() if k != "log"}, summary["log"][-1500:]))
+
+
+@test
+def test_loop_dry_run_dispatch_does_not_claim():
+    lab = Lab("loop_dry")
+    lab.plan_task("MOCK-601", mock={"sleep_ms": 20, "receipt": CLEAN_RECEIPT})
+    lab.publish()
+    lab.pin_manifest()
+    lab.write_config(mode="dry-run")
+    _write_permits(lab, [{
+        "task_id": "MOCK-601", "revision": 1, "scopes": ["offline-testing"],
+        "budget": 1, "deadline": "2027-01-01T00:00:00+08:00",
+    }])
+    proc = _loop(lab, "--dispatch")
+    check(proc.returncode == 0, "dry-run 应退出 0\n%s" % proc.stdout)
+    check("不领取" in proc.stdout, "应说明不领取：%s" % proc.stdout)
+    check(lab.exec_starts() == 0, "dry-run 加 dispatch 不得执行")
+    check(not lab.events("claim"), "不得 claim")
+
+
+@test
+def test_permit_blocks_expired_scope_and_bad_signature():
+    future = "2027-01-01T00:00:00+08:00"
+    past = "2020-01-01T00:00:00+08:00"
+
+    expired = Lab("permit_expired")
+    expired.plan_task("MOCK-602", mock={"sleep_ms": 20, "receipt": CLEAN_RECEIPT})
+    expired.publish()
+    expired.pin_manifest()
+    expired.write_config(mode="dry-run")
+    _write_permits(expired, [{
+        "task_id": "MOCK-602", "revision": 1, "scopes": ["offline-testing"],
+        "budget": 1, "deadline": past,
+    }])
+    proc = _loop(expired, "--dispatch", "--offline-run", "--max-cycles", "1")
+    check(proc.returncode == 0, "过期许可应停止派发而不是崩溃\n%s" % proc.stdout)
+    check(expired.exec_starts() == 0, "过期许可不得执行")
+
+    scoped = Lab("permit_scope")
+    scoped.plan_task("MOCK-603", scopes=("offline-testing",),
+                     mock={"sleep_ms": 20, "receipt": CLEAN_RECEIPT})
+    scoped.publish()
+    scoped.pin_manifest()
+    scoped.write_config(mode="dry-run")
+    _write_permits(scoped, [{
+        "task_id": "MOCK-603", "revision": 1, "scopes": ["framework-development"],
+        "budget": 1, "deadline": future,
+    }])
+    proc = _loop(scoped, "--dispatch", "--offline-run", "--max-cycles", "1")
+    check(proc.returncode == 0, proc.stdout)
+    check(scoped.exec_starts() == 0, "超范围许可不得执行")
+    check(scoped.events("permit_denied"), "应记录 permit_denied")
+
+    signed = Lab("permit_sig")
+    _key, _pub, _fp = _signing_key(signed, "good")
+    _ok, other_pub, other_fp = _signing_key(signed, "other")
+    signed.sign_key = _key
+    signed.plan_task("MOCK-604", mock={"sleep_ms": 20, "receipt": CLEAN_RECEIPT})
+    signed.publish()
+    signed.write_trust(signers=[{"identity": "01-mock@example.invalid",
+                                 "public_key": other_pub, "fingerprint": other_fp}])
+    signed.write_config(mode="dry-run")
+    _write_permits(signed, [{
+        "task_id": "MOCK-604", "revision": 1, "scopes": ["offline-testing"],
+        "budget": 1, "deadline": future,
+    }])
+    proc = _loop(signed, "--dispatch", "--offline-run", "--max-cycles", "1")
+    check(proc.returncode == 0, proc.stdout)
+    check(signed.exec_starts() == 0, "错误签名不得领取")
+
+
+@test
+def test_partial_ledger_stops_without_claim():
+    lab = Lab("partial_ledger")
+    lab.plan_task("MOCK-605", mock={"sleep_ms": 20, "receipt": CLEAN_RECEIPT})
+    lab.publish()
+    lab.pin_manifest()
+    lab.write_config(mode="mock")
+    path = lab.root / "state" / "ledger.jsonl"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_bytes(b'{"event":"claim","attempt":"MOCK-605@r1"')
+    proc = lab.run_worker("--once")
+    check(proc.returncode == 6, "半行台账应失败关闭，实际 %s\n%s" % (proc.returncode, proc.stdout))
+    check(lab.exec_starts() == 0, "坏台账不得重新领取")
+    check("半行" in proc.stdout, proc.stdout)
+
+
+@test
+def test_overlay_finally_and_live_not_started():
+    from executor.config import load_config
+    from executor.overlay import execution_overlay
+
+    lab = Lab("overlay_finally")
+    lab.plan_task("MOCK-606", mock={"sleep_ms": 20, "receipt": CLEAN_RECEIPT})
+    lab.publish()
+    lab.pin_manifest()
+    lab.write_config(mode="dry-run")
+    cfg = load_config(lab.config_path)
+    before = lab.config_path.read_bytes()
+    with execution_overlay(cfg):
+        check((lab.root / "state" / "overlay-empty.yml").exists(), "overlay 期间应有临时文件")
+        lab.config_path.write_text(before.decode("utf-8") + "\n", encoding="utf-8")
+    check(not (lab.root / "state" / "overlay-empty.yml").exists(), "finally 应删除临时 patch")
+    check(not (lab.root / "state" / "overlay.json").exists(), "finally 应删除标记")
+    check(lab.config_path.read_bytes() == before, "配置字节应恢复")
+
+    live = Lab("loop_live")
+    live.plan_task("MOCK-607", mock={"sleep_ms": 20, "receipt": CLEAN_RECEIPT})
+    live.publish()
+    live.pin_manifest()
+    live.write_config(mode="live")
+    proc = _loop(live, "--dispatch", "--offline-run", "--max-cycles", "1")
+    check(proc.returncode == 2, "live 配置不得启动真实入口\n%s" % proc.stdout)
+    check("model_requests=0" in proc.stdout, proc.stdout)
+    check(live.exec_starts() == 0, "未配置为离线 overlay 时不得有模型或 fake 请求")
+
+
+@test
+def test_bad_final_and_timeout_are_not_success():
+    lab = Lab("bad_final")
+    lab.plan_task("MOCK-608", mock={"sleep_ms": 20, "receipt": CLEAN_RECEIPT, "final_kind": "error"})
+    lab.publish()
+    lab.pin_manifest()
+    lab.write_config(mode="mock")
+    proc = lab.run_worker("--once")
+    check(proc.returncode == 0, proc.stdout)
+    check(lab.exec_starts() == 1, "fake 进程应启动一次")
+    check(not lab.events("attempt_upload_ok"), "error final 不得上传为成功")
+    check(not lab.remote_has("results/MOCK-608/r1/a1.md"), "不得有成功回执")
+
+    slow = Lab("timeout_not_success")
+    slow.plan_task("MOCK-609", mock={"sleep_ms": 5000, "receipt": CLEAN_RECEIPT})
+    slow.publish()
+    slow.pin_manifest()
+    slow.write_config(mode="mock")
+    raw = json.loads(slow.config_path.read_text(encoding="utf-8"))
+    raw["limits"]["task_timeout_seconds"] = 1
+    raw["limits"]["cancel_grace_seconds"] = 1
+    raw["harness"]["unattended"]["timeout_seconds"] = 1
+    slow.config_path.write_text(json.dumps(raw), encoding="utf-8")
+    proc = slow.run_worker("--once")
+    check(proc.returncode == 5, "超时应进入 recovery，实际 %s\n%s" % (proc.returncode, proc.stdout))
+    check(not slow.events("attempt_upload_ok"), "超时不得报成功")
+
+
+@test
+def test_second_poll_does_not_rerun():
+    lab = Lab("loop_rerun")
+    key, public_key, fingerprint = _signing_key(lab, "loopkey")
+    lab.sign_key = key
+    lab.plan_task("MOCK-610", mock={"sleep_ms": 20, "receipt": CLEAN_RECEIPT})
+    lab.publish()
+    lab.write_trust(signers=[{"identity": "01-mock@example.invalid",
+                              "public_key": public_key, "fingerprint": fingerprint}])
+    lab.write_config(mode="dry-run")
+    _write_permits(lab, [{
+        "task_id": "MOCK-610", "revision": 1, "scopes": ["offline-testing"],
+        "budget": 1, "deadline": "2027-01-01T00:00:00+08:00",
+    }])
+    proc = _loop(lab, "--dispatch", "--offline-run", "--max-cycles", "2", timeout=40)
+    check(proc.returncode == 0, proc.stdout)
+    check(lab.exec_starts() == 1, "第二轮轮询不得重跑，实际 %d" % lab.exec_starts())
+    check(lab.remote_has("results/MOCK-610/r1/a1.md"), "应上传原始回执")
+    check(lab.remote_has("results/MOCK-610/r1/a1.meta.json"), "应上传结构化元数据")
+
+
 # ---------------------------------------------------------------- 运行器
 
 def main(argv: list[str]) -> int:

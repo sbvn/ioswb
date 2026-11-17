@@ -69,28 +69,40 @@ class Ledger:
         self.path = path
         self._seq = 0
         self._records: list[dict[str, Any]] = []
+        self.corrupt_reason: str | None = None
 
     # ---------- 读 ----------
     def load(self) -> None:
+        """整份台账必须可解析。半行或坏行不能丢掉后继续领取。"""
         self._records = []
         self._seq = 0
+        self.corrupt_reason = None
         if not self.path.exists():
             return
-        with open(self.path, "r", encoding="utf-8") as handle:
-            for line in handle:
-                line = line.strip()
-                if not line:
-                    continue
-                try:
-                    record = json.loads(line)
-                except json.JSONDecodeError:
-                    # 崩溃可能留下半行；忽略尾部坏行，不猜测其含义。
-                    continue
-                if isinstance(record, dict):
-                    self._records.append(record)
-                    seq = record.get("seq")
-                    if isinstance(seq, int) and seq > self._seq:
-                        self._seq = seq
+        raw = self.path.read_bytes()
+        if raw and not raw.endswith(b"\n"):
+            self.corrupt_reason = "台账末尾是半行，拒绝继续领取"
+            return
+        text = raw.decode("utf-8", errors="replace")
+        for lineno, line in enumerate(text.splitlines(), 1):
+            if not line.strip():
+                continue
+            try:
+                record = json.loads(line)
+            except json.JSONDecodeError:
+                self._records = []
+                self._seq = 0
+                self.corrupt_reason = "台账第 %d 行不是完整 JSON，拒绝继续领取" % lineno
+                return
+            if not isinstance(record, dict) or not isinstance(record.get("event"), str):
+                self._records = []
+                self._seq = 0
+                self.corrupt_reason = "台账第 %d 行损坏，拒绝继续领取" % lineno
+                return
+            self._records.append(record)
+            seq = record.get("seq")
+            if isinstance(seq, int) and seq > self._seq:
+                self._seq = seq
 
     @property
     def records(self) -> list[dict[str, Any]]:

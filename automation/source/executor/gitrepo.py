@@ -141,22 +141,29 @@ class RepoCache:
     # ---------- 上传 ----------
     def commit_and_push_file(self, rel_path: str, data: bytes, message: str,
                              retries: int = 3) -> dict:
-        """在最新远端头上追加一个只含该文件的提交并推送。
+        """在最新远端头上追加一个只含该文件的提交并推送。"""
+        return self.commit_and_push_files([(rel_path, data)], message, retries=retries)
 
-        失败只返回 status=failed，由调用方标记 upload_failed；绝不重跑任务。
-        """
+    def commit_and_push_files(self, files: list[tuple[str, bytes]], message: str,
+                              retries: int = 3) -> dict:
+        """一次提交里放入多份回执文件并普通 push。失败不重跑任务。"""
+        if not files:
+            return {"status": "failed", "commit": None, "attempts": 0, "rel_path": "",
+                    "error": "没有可上传的文件"}
         path = self.ensure_clone()
         last_error = ""
+        rels = [rel for rel, _data in files]
         for attempt in range(1, max(1, retries) + 1):
             try:
                 run_git(["fetch", "--quiet", "--prune", "origin", self.branch], cwd=path, timeout=300)
                 head = run_git(["rev-parse", "origin/%s" % self.branch], cwd=path).stdout.strip()
                 run_git(["checkout", "--quiet", "--force", "--detach", head], cwd=path, timeout=120)
-                target = path / rel_path
-                ensure_dir(target.parent)
-                with open(target, "wb") as handle:
-                    handle.write(data)
-                run_git(["add", "--", rel_path], cwd=path)
+                for rel_path, data in files:
+                    target = path / rel_path
+                    ensure_dir(target.parent)
+                    with open(target, "wb") as handle:
+                        handle.write(data)
+                    run_git(["add", "--", rel_path], cwd=path)
                 run_git(["commit", "--quiet", "-m", message], cwd=path)
                 local = run_git(["rev-parse", "HEAD"], cwd=path).stdout.strip()
                 # 普通 push：不带 --force/--force-with-lease。
@@ -164,12 +171,11 @@ class RepoCache:
                                cwd=path, check=False, timeout=300)
                 if push.returncode == 0:
                     return {"status": "pushed", "commit": local, "attempts": attempt,
-                            "rel_path": rel_path}
+                            "rel_path": rels[0], "rel_paths": rels}
                 last_error = scrub((push.stderr or push.stdout or "").strip())[:600]
-                # 非快进或临时错误：回到干净状态，下一轮在最新头上重建提交。
                 run_git(["checkout", "--quiet", "--force", "--detach", "origin/%s" % self.branch],
                         cwd=path, check=False)
             except GitError as exc:
                 last_error = scrub(str(exc))[:600]
-        return {"status": "failed", "commit": None, "attempts": retries, "rel_path": rel_path,
-                "error": last_error}
+        return {"status": "failed", "commit": None, "attempts": retries, "rel_path": rels[0],
+                "rel_paths": rels, "error": last_error}

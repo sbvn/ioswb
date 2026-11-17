@@ -5,6 +5,7 @@
 - 同一 (task_id, revision) 只执行一次 —— 这是 **at-most-once**，不是 exactly-once；
   崩溃时宁可没有回执，也不重跑。
 - 领取前必须：清单可信、任务内容摘要匹配、范围在批准清单内。
+- 持续入口另要求本机 permits.json 写明任务、版本、范围、预算和期限。
 - STOP（本机文件或仓库暂停标志）在三个时点生效；只有确认子进程退出才记 stopped。
 - 回执先原子落本机 spool，再上传；上传失败只重传。
 - 结果不明 → recovery_required，等人核查，不自动续跑。
@@ -67,11 +68,13 @@ def _fault(phase: str) -> None:
 
 class Worker:
     def __init__(self, cfg: Config, *, mode: str | None = None, once: bool = False,
-                 max_cycles: int = 0, out: Callable[[str], None] = print) -> None:
+                 max_cycles: int = 0, require_permit: bool = False,
+                 out: Callable[[str], None] = print) -> None:
         self.cfg = cfg
         self.mode = mode or cfg.mode
         self.once = once
         self.max_cycles = max_cycles
+        self.require_permit = require_permit
         self.out = out
         self.ledger = Ledger(cfg.ledger_path)
         self.lock = ProcessLock(cfg.lock_path)
@@ -79,6 +82,7 @@ class Worker:
         self.product: dict = {}
         self._pause_seen_at: str | None = None
         self._child_pid: int | None = None
+        self._ledger_corrupt = False
 
     # ------------------------------------------------------------ 入口
 
@@ -91,6 +95,11 @@ class Worker:
         exit_code = EXIT_OK
         try:
             self.ledger.load()
+            if self.ledger.corrupt_reason:
+                self._ledger_corrupt = True
+                self.out("[台账] %s" % self.ledger.corrupt_reason)
+                exit_code = EXIT_ERROR
+                return exit_code
             self.product = probe_product(cfg) if self.mode == "live" else {}
             self._write_worker_state("running")
             self._recovery_sweep()
@@ -130,7 +139,8 @@ class Worker:
             exit_code = EXIT_ERROR
         finally:
             self._write_worker_state("stopped" if exit_code == EXIT_STOPPED else "idle")
-            self.ledger.append("worker_stop", exit_code=exit_code)
+            if not self._ledger_corrupt:
+                self.ledger.append("worker_stop", exit_code=exit_code)
             self.lock.release()
         return exit_code
 
@@ -202,6 +212,17 @@ class Worker:
                                      manifest_decision=manifest_decision)
             for entry in published
         }
+        permit_set = None
+        if self.require_permit:
+            from .permit import load_permits
+
+            permit_set = load_permits(self.cfg.root / "config" / "permits.json")
+            if permit_set.blocked:
+                self._record_once("permit_blocked", permit_set.blocked[:120],
+                                  reason=permit_set.blocked)
+                self.out("[许可] %s" % permit_set.blocked)
+                return "wait"
+
         trusted_any = any(d.trusted for d in decisions.values())
         if not trusted_any:
             self._record_once("refused_untrusted", "trust:" + manifest.raw_sha256[:12],
@@ -249,6 +270,14 @@ class Worker:
                 continue
             if not decision.trusted:
                 continue
+            if permit_set is not None:
+                allowed, why = permit_set.allows(entry, self.ledger)
+                if not allowed:
+                    self._record_once("permit_denied", entry.key, attempt=entry.key,
+                                      task_id=entry.task_id, revision=entry.revision,
+                                      reason=why)
+                    self.out("[许可] %s：%s" % (entry.key, why))
+                    continue
 
             ok, reason, task_bytes = verify_task_binding(entry, self.repo, head)
             if not ok:
@@ -359,6 +388,8 @@ class Worker:
             raise ConfigError("未知模式: %s" % self.mode)
 
         spec = dict(entry.meta.get("mock_harness") or {}) if self.mode == "mock" else {}
+        spec.pop("command", None)
+        spec.pop("args", None)
         spec["stop_file"] = str(cfg.stop_path)
 
         payload = {
@@ -444,12 +475,19 @@ class Worker:
             return "wait"
 
         rel = cfg.result_rel_path(entry.task_id, entry.revision, attempt)
+        meta_rel = rel[:-3] + ".meta.json" if rel.endswith(".md") else rel + ".meta.json"
         outbox_path = cfg.outbox_dir / rel
+        meta_path = cfg.outbox_dir / meta_rel
         atomic_write_text(outbox_path, text)
+        meta = self._receipt_meta(entry, attempt, outcome, rel, sha256_text(text))
+        meta_text = json.dumps(meta, ensure_ascii=False, indent=2, sort_keys=True) + "\n"
+        atomic_write_text(meta_path, meta_text)
         receipt_digest = sha256_text(text)
         self.ledger.append("attempt_phase", attempt=key, phase="result_saved")
         self.ledger.append("attempt_result_saved", attempt=key, rel_path=rel,
+                           meta_rel_path=meta_rel,
                            receipt_sha256=receipt_digest,
+                           meta_sha256=sha256_text(meta_text),
                            outbox=str(outbox_path.relative_to(cfg.root)),
                            context=context_meta)
         store.save(revision=entry.revision, attempt=attempt, phase="running",
@@ -467,42 +505,77 @@ class Worker:
             self.out("[停止] 回执已保存但未上传；恢复后只补传，不重跑。")
             return "stopped"
 
-        return self._upload(key, rel, text, entry)
+        return self._upload(key, rel, text, meta_text, meta_rel, entry)
 
-    def _upload(self, key: str, rel: str, text: str, entry: TaskEntry) -> str:
+    def _receipt_meta(self, entry: TaskEntry, attempt: int, outcome, rel: str,
+                      receipt_sha256: str) -> dict:
+        kind = "missing"
+        if outcome.stdout_path:
+            final_path = Path(outcome.stdout_path).parent / "final.json"
+            try:
+                event = json.loads(final_path.read_text(encoding="utf-8"))
+                reason = event.get("reason") if isinstance(event, dict) else None
+                if isinstance(reason, dict) and isinstance(reason.get("kind"), str):
+                    kind = reason["kind"]
+            except (OSError, json.JSONDecodeError):
+                kind = "unreadable"
+        return {
+            "schema": "ioswb-receipt-meta/1",
+            "task_id": entry.task_id,
+            "revision": entry.revision,
+            "attempt": attempt,
+            "runner": self.mode,
+            "exit_code": outcome.exit_code,
+            "status": outcome.status,
+            "final_reason_kind": kind,
+            "marker_ok": outcome.status == "success" and kind == "completed",
+            "duration_seconds": round(outcome.duration_seconds, 3),
+            "receipt_sha256": receipt_sha256,
+            "raw_rel_path": rel,
+            "saved_login": False,
+        }
+
+    def _upload(self, key: str, rel: str, text: str, meta_text: str, meta_rel: str,
+                entry: TaskEntry) -> str:
         cfg = self.cfg
         payload = text.encode("utf-8")
+        meta_payload = meta_text.encode("utf-8")
         digest = sha256_bytes(payload)
+        meta_digest = sha256_bytes(meta_payload)
         store = self._handoff(entry.task_id)
         self.ledger.append("attempt_phase", attempt=key, phase="uploading")
         _fault("uploading")
 
-        # 幂等：如果远端该路径已有同内容（例如上传中途崩溃后重来），不再新建提交。
+        # 幂等：远端两份文件都已是同内容时，不再新建提交。
         try:
             head = self.repo.fetch()
-            if self.repo.file_exists(head, rel):
-                existing = self.repo.read_file(head, rel)
-                if sha256_bytes(existing) == digest:
-                    self.ledger.append("upload_duplicate_skipped", attempt=key, rel_path=rel,
-                                       commit=head)
-                    self.ledger.append("attempt_upload_ok", attempt=key, rel_path=rel,
-                                       commit=head, skipped_duplicate=True)
-                    store.save(revision=entry.revision, attempt=1, phase="succeeded",
-                               digest=entry.content_sha256, receipt_rel_path=rel,
-                               summary="远端已有同内容回执，未重复提交")
-                    self.out("[上传] 远端已有同内容回执，跳过重复提交（%s）。" % rel)
-                    return "wait"
+            raw_same = self.repo.file_exists(head, rel) and sha256_bytes(
+                self.repo.read_file(head, rel)) == digest
+            meta_same = self.repo.file_exists(head, meta_rel) and sha256_bytes(
+                self.repo.read_file(head, meta_rel)) == meta_digest
+            if raw_same and meta_same:
+                self.ledger.append("upload_duplicate_skipped", attempt=key, rel_path=rel,
+                                   meta_rel_path=meta_rel, commit=head)
+                self.ledger.append("attempt_upload_ok", attempt=key, rel_path=rel,
+                                   meta_rel_path=meta_rel, commit=head, skipped_duplicate=True)
+                store.save(revision=entry.revision, attempt=1, phase="succeeded",
+                           digest=entry.content_sha256, receipt_rel_path=rel,
+                           summary="远端已有同内容回执，未重复提交")
+                self.out("[上传] 远端已有同内容回执，跳过重复提交（%s）。" % rel)
+                return "wait"
         except GitError:
             pass
 
         message = "自动回执 %s r%d a1：%s" % (
             entry.task_id, entry.revision, entry.title or "任务结果",
         )
-        result = self.repo.commit_and_push_file(
-            rel, payload, message, retries=cfg.limits.upload_retries,
+        result = self.repo.commit_and_push_files(
+            [(rel, payload), (meta_rel, meta_payload)], message,
+            retries=cfg.limits.upload_retries,
         )
         if result["status"] == "pushed":
             self.ledger.append("attempt_upload_ok", attempt=key, rel_path=rel,
+                               meta_rel_path=meta_rel,
                                commit=result["commit"], push_attempts=result.get("attempts"))
             store.save(revision=entry.revision, attempt=1, phase="succeeded",
                        digest=entry.content_sha256, receipt_rel_path=rel,
@@ -542,13 +615,20 @@ class Worker:
             if not saved:
                 continue
             rel = saved.get("rel_path")
+            meta_rel = saved.get("meta_rel_path")
             outbox_path = self.cfg.outbox_dir / rel
-            if not outbox_path.exists():
+            if not outbox_path.exists() or not meta_rel:
                 self.ledger.append("upload_missing_outbox", attempt=key, rel_path=rel)
+                continue
+            meta_path = self.cfg.outbox_dir / meta_rel
+            if not meta_path.exists():
+                self.ledger.append("upload_missing_outbox", attempt=key, rel_path=rel,
+                                   meta_rel_path=meta_rel)
                 continue
             if self._stop_requested():
                 return "stopped"
             text = outbox_path.read_text(encoding="utf-8")
+            meta_text = meta_path.read_text(encoding="utf-8")
             findings = scan_receipt(text)
             if findings:
                 self.ledger.append("attempt_quarantined", attempt=key,
@@ -556,7 +636,7 @@ class Worker:
                                    reason="rescan_before_upload")
                 continue
             self.out("[补传] %s" % rel)
-            self._upload(key, rel, text, self._entry_for(key))
+            self._upload(key, rel, text, meta_text, meta_rel, self._entry_for(key))
             if self._stop_requested():
                 return "stopped"
         return "wait"

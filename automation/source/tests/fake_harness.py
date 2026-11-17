@@ -91,6 +91,15 @@ def main() -> int:
         )
 
     Path(args.out).write_text(receipt, encoding="utf-8")
+    kind = spec.get("final_kind") or "completed"
+    final = {
+        "type": "final",
+        "reason": {"kind": kind},
+        "text": receipt,
+    }
+    (Path(args.out).parent / "final.json").write_text(
+        json.dumps(final, ensure_ascii=False) + "\n", encoding="utf-8")
+    log_exec("end kind=%s" % kind)
     log_exec("end")
     sys.stdout.write("mock harness done\n")
     return 0

@@ -198,7 +198,7 @@ class Runner:
                           stderr_path=str(stderr_path))
 
     def success_gate(self, exit_code: int | None, receipt_text: str | None) -> str | None:
-        """子类可追加完成条件。默认不额外收紧（mock 仍以退出码和回执为准）。"""
+        """子类可追加完成条件。默认不再额外收紧。"""
         return None
 
     def collect_receipt(self) -> str | None:
@@ -217,6 +217,9 @@ class MockRunner(Runner):
     def build(self, payload: dict, spec: dict) -> tuple[list[str], str, dict]:
         mock_spec = dict(payload)
         mock_spec.update(spec or {})
+        # 任务正文和清单 meta 不能把 command/args 送进子进程。
+        mock_spec.pop("command", None)
+        mock_spec.pop("args", None)
         spec_path = self.attempt_dir / "harness.spec.json"
         spec_path.write_text(json.dumps(mock_spec, ensure_ascii=False, indent=2), encoding="utf-8")
         harness = Path(__file__).resolve().parent.parent / "tests" / "fake_harness.py"
@@ -226,6 +229,26 @@ class MockRunner(Runner):
         env["PYTHONIOENCODING"] = "utf-8"
         env["MOCK_HARNESS_PARENT_PID"] = str(os.getpid())
         return cmd, "", env
+
+    def success_gate(self, exit_code: int | None, receipt_text: str | None) -> str | None:
+        """fake runner 与真实入口同一条完成规则：exit 0 且 final.reason.kind 为 completed。"""
+        if exit_code != 0:
+            return None
+        path = self.attempt_dir / "final.json"
+        if not path.exists():
+            return "没有 final 事件"
+        try:
+            event = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            return "final 事件格式坏"
+        reason = event.get("reason") if isinstance(event, dict) else None
+        kind = reason.get("kind") if isinstance(reason, dict) else None
+        if kind != "completed":
+            shown = kind if isinstance(kind, str) else "缺失"
+            return "final.reason.kind 为 %s，不是 completed" % shown
+        if not (receipt_text and receipt_text.strip()):
+            return "exit 0 且 completed，但没有有效任务输出"
+        return None
 
 
 class HeadlessRunner(Runner):

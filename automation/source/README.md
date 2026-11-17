@@ -6,7 +6,7 @@
 它不会：连接手机、运行注册流程、采集凭据、安装工具或系统服务、修改 `D:\GoDemo\wbjiaoben`
 下任何既有业务脚本。所有写操作都限制在 `automation/` 内。
 
-> 当前状态：**离线框架完成，mock 全绿，真实自动执行仍被阻塞**。详见 [BOOTSTRAP.md](BOOTSTRAP.md)。
+> 当前状态：离线持续调度可以由 `bin/dsh_loop.py` 在 mock 下跑通。真实模型和本机常驻都还没有启动。见 [LOOP.md](LOOP.md)。
 
 ---
 
@@ -27,6 +27,9 @@
 | 只提交脱敏 `.md`，上传前硬扫描 | `executor/redact.py` |
 | 不强推、不覆盖他人提交 | `executor/gitrepo.py`（只用普通 `git push`） |
 | 默认 dry-run；live 需多重闸门 | `executor/config.py` `_validate_mode` |
+| 持续入口另要本机 permit：任务、版本、范围、预算、期限 | `executor/permit.py`；清单不能自授权 |
+| 台账半行或坏行则失败关闭，不继续领取 | `executor/ledger.py` `load` |
+| 临时执行层不改磁盘 mode，退出时删掉临时 patch | `executor/overlay.py`、`bin/dsh_loop.py` |
 
 ---
 
