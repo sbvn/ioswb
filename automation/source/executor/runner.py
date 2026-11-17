@@ -234,13 +234,20 @@ class HeadlessRunner(Runner):
     def build(self, payload: dict, spec: dict) -> tuple[list[str], str, dict]:
         node = self.product["node_executable"]
         bin_js = self.product["bin_js"]
-        cmd = [
-            node, bin_js,
-            "--profile", "headless",
+        # 启动器只解析自己的 flag，遇到第一个不认识的 token 就把后面全部交给 app。
+        # 因此启动器 flag（--profile、--patch）必须在 app flag（--permission-mode 等）之前，
+        # 否则 app 会收到 "unknown option '--patch'"。
+        cmd = [node, bin_js, "--profile", "headless"]
+        # --patch 只允许指向本项目 automation 内的无密钥覆盖文件（配置层已校验）。
+        for rel in self.cfg.harness.patch_files:
+            path = Path(rel)
+            resolved = path if path.is_absolute() else (self.cfg.root / rel)
+            cmd.extend(["--patch", str(resolved)])
+        cmd.extend([
             "--permission-mode", self.cfg.harness.permission_mode,
             "--approval-policy", self.cfg.harness.approval_policy,
             "--json", "-",
-        ]
+        ])
         # 不传 --session-id：文档规定每次调用默认新建 session-<uuid>。
         # context 预算与 handoff 已在 worker 侧合成到 context_text 里。
         prompt = payload.get("context_text") or payload.get("task_text") or ""
@@ -248,6 +255,33 @@ class HeadlessRunner(Runner):
         env["ELECTRON_RUN_AS_NODE"] = "1"
         env["PYTHONIOENCODING"] = "utf-8"
         return cmd, prompt, env
+
+    def collect_receipt(self) -> str | None:
+        """优先 RECEIPT.md；没有则回退到 --json 流里的 final.text（文档保证无损）。"""
+        receipt = self.attempt_dir / "RECEIPT.md"
+        if receipt.exists():
+            text = receipt.read_text(encoding="utf-8", errors="replace").strip()
+            if text:
+                return text
+        return self._final_answer_from_stream()
+
+    def _final_answer_from_stream(self) -> str | None:
+        log = self.attempt_dir / "harness.stdout.log"
+        if not log.exists():
+            return None
+        answer = None
+        for line in log.read_text(encoding="utf-8", errors="replace").splitlines():
+            line = line.strip()
+            if not line.startswith("{"):
+                continue
+            try:
+                event = json.loads(line)
+            except json.JSONDecodeError:
+                continue
+            if event.get("type") == "final" and isinstance(event.get("text"), str) \
+                    and event["text"].strip():
+                answer = event["text"].strip()
+        return answer
 
 
 # ---------------------------------------------------------------- 产品核验

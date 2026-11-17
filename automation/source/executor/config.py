@@ -40,6 +40,7 @@ class HarnessConfig:
     permission_mode: str = "workspace-write"
     approval_policy: str = "never"
     timeout_seconds: float = 3600.0
+    patch_files: tuple[str, ...] = ()
     mock_command: tuple[str, ...] = ()
     mock_enabled: bool = True
     documented: tuple[str, ...] = ()
@@ -199,6 +200,8 @@ def load_config(path: str | Path) -> Config:
         permission_mode=str(unattended.get("permission_mode") or "workspace-write"),
         approval_policy=str(unattended.get("approval_policy") or "never"),
         timeout_seconds=float(unattended.get("timeout_seconds", 3600.0)),
+        patch_files=tuple(_as_str_list(unattended.get("patch_files"),
+                                       "harness.unattended.patch_files")),
         mock_command=tuple(_as_str_list(mock_raw.get("command"), "harness.mock.command")),
         mock_enabled=bool(mock_raw.get("enabled", True)),
         documented=tuple(_as_str_list(unattended.get("documented"), "harness.unattended.documented")),
@@ -236,7 +239,20 @@ def load_config(path: str | Path) -> Config:
     )
     _validate_placement(cfg)
     _validate_mode(cfg)
+    _validate_patch_files(cfg)
     return cfg
+
+
+def _validate_patch_files(cfg: Config) -> None:
+    """`--patch` 只允许指向本项目 automation 内的文件（不写全局配置）。"""
+    for rel in cfg.harness.patch_files:
+        path = Path(rel)
+        resolved = (cfg.root / path).resolve() if not path.is_absolute() else path.resolve()
+        root = cfg.root.resolve()
+        if root != resolved and root not in resolved.parents:
+            raise ConfigError("--patch 文件必须在 automation 根目录内: %s" % rel)
+        if not resolved.exists():
+            raise ConfigError("--patch 文件不存在: %s" % rel)
 
 
 def _validate_placement(cfg: Config) -> None:

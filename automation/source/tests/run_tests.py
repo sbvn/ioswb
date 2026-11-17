@@ -803,6 +803,80 @@ def test_headless_command_uses_fresh_session():
     check(stdin_text == "任务正文", "任务应从 stdin 传入")
 
 
+@test
+def test_headless_patch_passthrough():
+    """官方 --patch 透传：只指向 automation 内的无密钥文件，且位于 app 参数之前。"""
+    from executor.config import load_config
+    from executor.runner import HeadlessRunner
+
+    lab = Lab("headless_patch")
+    lab.plan_task("MOCK-501", mock={"sleep_ms": 10, "receipt": CLEAN_RECEIPT})
+    lab.publish()
+    lab.pin_manifest()
+    lab.write_config(mode="mock")
+    patch = lab.root / "state" / "local-auth.yml"
+    patch.parent.mkdir(parents=True, exist_ok=True)
+    patch.write_text("- id: credentials\n  disabled: false\n", encoding="utf-8")
+    raw = json.loads(lab.config_path.read_text(encoding="utf-8"))
+    raw["harness"]["unattended"]["patch_files"] = [str(patch)]
+    lab.config_path.write_text(json.dumps(raw, ensure_ascii=False, indent=2), encoding="utf-8")
+
+    cfg = load_config(lab.config_path)
+    runner = HeadlessRunner(cfg, lab.root / "state" / "attempts" / "p",
+                            {"node_executable": "node", "bin_js": "bin.js"})
+    cmd, _stdin, _env = runner.build({"context_text": "T"}, {})
+    check("--patch" in cmd, "配置了 patch_files 就应带 --patch：%s" % cmd)
+    check(cmd[cmd.index("--patch") + 1] == str(patch), "patch 路径不对")
+    # 启动器 flag 必须在 app flag 之前，否则 app 会报 unknown option '--patch'
+    check(cmd.index("--patch") < cmd.index("--permission-mode"),
+          "--patch 必须位于 app 参数（--permission-mode 等）之前：%s" % cmd)
+    check(cmd.index("--profile") < cmd.index("--patch"), "--profile 应在 --patch 之前")
+
+    # 未配置时不得出现 --patch
+    raw.pop("patch_files", None)
+    raw["harness"]["unattended"].pop("patch_files", None)
+    lab.config_path.write_text(json.dumps(raw, ensure_ascii=False, indent=2), encoding="utf-8")
+    cmd2, _s, _e = HeadlessRunner(load_config(lab.config_path),
+                                  lab.root / "state" / "attempts" / "p",
+                                  {"node_executable": "node", "bin_js": "bin.js"}).build(
+        {"context_text": "T"}, {})
+    check("--patch" not in cmd2, "未配置时不得带 --patch")
+
+    # 越界的 patch 路径必须被拒
+    raw["harness"]["unattended"]["patch_files"] = ["C:/outside/evil.yml"]
+    lab.config_path.write_text(json.dumps(raw, ensure_ascii=False, indent=2), encoding="utf-8")
+    try:
+        load_config(lab.config_path)
+        check(False, "automation 之外的 patch 应被拒绝")
+    except Exception:
+        pass
+
+
+@test
+def test_headless_final_event_fallback():
+    """没有 RECEIPT.md 时，从 --json 流的 final.text 取回执（文档保证无损）。"""
+    from executor.config import load_config
+    from executor.runner import HeadlessRunner
+
+    lab = Lab("final_fallback")
+    lab.plan_task("MOCK-502", mock={"sleep_ms": 10, "receipt": CLEAN_RECEIPT})
+    lab.publish()
+    lab.pin_manifest()
+    lab.write_config(mode="mock")
+    attempt = lab.root / "state" / "attempts" / "p"
+    attempt.mkdir(parents=True, exist_ok=True)
+    answer = "IOS-AUTO-SMOKE-001\nSMOKE-001"
+    (attempt / "harness.stdout.log").write_text(
+        json.dumps({"type": "session", "sessionId": "session-x"}, ensure_ascii=False) + "\n"
+        + json.dumps({"type": "final", "sessionId": "session-x",
+                      "reason": {"kind": "completed"}, "text": answer}, ensure_ascii=False) + "\n",
+        encoding="utf-8")
+    runner = HeadlessRunner(load_config(lab.config_path), attempt,
+                            {"node_executable": "node", "bin_js": "bin.js"})
+    check(runner.collect_receipt() == answer, "应回退到 final.text，实际 %r"
+          % runner.collect_receipt())
+
+
 # ---------------------------------------------------------------- 运行器
 
 def main(argv: list[str]) -> int:
