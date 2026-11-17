@@ -1,7 +1,7 @@
 {
   "schema": "ioswb-release-manifest/1",
   "protocol_version": 1,
-  "generated_at": "2026-11-17T19:08:30+08:00",
+  "generated_at": "2026-11-17T19:14:30+08:00",
   "tasks": [
     {
       "task_id": "SMOKE-001",
@@ -121,7 +121,7 @@
     {
       "task_id": "IOS-005",
       "revision": 2,
-      "status": "published",
+      "status": "withdrawn",
       "task_path": "tasks/IOS-005-r2.md",
       "task_commit": "9e92e94c2f086a3a71b93a1fd469a7ff1e965227",
       "content_sha256": "03f16e464e38e86a194e4b16eedaa5a2300af7ceef5e9ec377074b1b517c5e79",
@@ -132,6 +132,21 @@
         "spawn"
       ],
       "title": "运行现有程序一次（冷启动）：打开微博、首页刷新1次、随机滑动3–5下"
+    },
+    {
+      "task_id": "IOS-005",
+      "revision": 3,
+      "status": "published",
+      "task_path": "tasks/IOS-005-r3.md",
+      "task_commit": "7d66b6d14463950759ba0b61562240d95dce8201",
+      "content_sha256": "d6c5db4142dfe9dcf90e7e809e01ec15a05f4f8b7c1f5a990b192c51b044dab2",
+      "scopes": [
+        "phone-operation",
+        "device-attach",
+        "real-touch",
+        "spawn"
+      ],
+      "title": "运行现有程序一次（预杀后冷启动）：打开微博、首页刷新1次、随机滑动3–5下"
     }
   ]
 }
